@@ -48,11 +48,14 @@ There are following known API libs to report meter telemetry data:
 All following agents and components have built-in meters reporting to the OAP through Meter APIs.
 1. Go agent for Go VM metrics
 2. Python agent for PVM metrics
-3. Java agent with Spring micrometer toolkit 
-4. Java agent for datasource metrics
-5. Java agent for thread-pool metrics
-6. Rover(eBPF) agent for metrics used continues profiling
-7. Satellite proxy self-observability metrics
+3. PHP agent for PHM (PHP Health Metrics) runtime metrics — **Linux only** (`/proc` sampling)
+4. Java agent with Spring micrometer toolkit 
+5. Java agent for datasource metrics
+6. Java agent for thread-pool metrics
+7. Rover(eBPF) agent for metrics used continues profiling
+8. Satellite proxy self-observability metrics
+
+See [PHP runtime metrics dashboard](dashboards-php-runtime.md) for PHM meter names and UI location.
 
 ## Configuration file
 
