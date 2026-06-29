@@ -349,6 +349,8 @@ jobs:
 
           - name: Agent NodeJS Backend
             config: test/e2e-v2/cases/nodejs/e2e.yaml
+          - name: Agent NodeJS SSL
+            config: test/e2e-v2/cases/nodejs/ssl/e2e.yaml
           - name: Agent Golang
             config: test/e2e-v2/cases/go/e2e.yaml
           - name: Agent NodeJS Frontend
