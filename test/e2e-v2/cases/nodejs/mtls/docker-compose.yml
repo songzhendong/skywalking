@@ -42,6 +42,7 @@ services:
       context: ..
       dockerfile: Dockerfile.nodejs
       args:
+        - SW_AGENT_NODEJS_REPO=${SW_AGENT_NODEJS_REPO}
         - SW_AGENT_NODEJS_COMMIT=${SW_AGENT_NODEJS_COMMIT}
     networks:
       - e2e
@@ -82,6 +83,7 @@ services:
       context: ..
       dockerfile: Dockerfile.nodejs
       args:
+        - SW_AGENT_NODEJS_REPO=${SW_AGENT_NODEJS_REPO}
         - SW_AGENT_NODEJS_COMMIT=${SW_AGENT_NODEJS_COMMIT}
     networks:
       - e2e
