@@ -110,7 +110,7 @@ services:
       medium:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD", "bash", "-c", "cat < /dev/null > /dev/tcp/127.0.0.1/5051" ]
+      test: [ "CMD", "bash", "-c", "cat < /dev/null > /dev/tcp/127.0.0.1/5001" ]
       interval: 5s
       timeout: 60s
       retries: 120

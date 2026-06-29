@@ -50,9 +50,11 @@ services:
       - 5000
     environment:
       SW_AGENT_COLLECTOR_BACKEND_SERVICES: oap:11800
+      SW_AGENT_FORCE_TLS: "true"
+      SW_AGENT_SSL_TRUSTED_CA_PATH: /app/ca/ca.crt
       SW_AGENT_INSTANCE: provider-instance
-      SW_AGENT_SSL_CERT_CHAIN_PATH: ca/client.crt
-      SW_AGENT_SSL_KEY_PATH: ca/client.pem
+      SW_AGENT_SSL_CERT_CHAIN_PATH: /app/ca/client.crt
+      SW_AGENT_SSL_KEY_PATH: /app/ca/client.pem
     volumes:
       - ../../simple/mtls/client:/app/ca:ro
       - ../provider.ts:/app/provider.ts
@@ -91,10 +93,12 @@ services:
       - 5001
     environment:
       SW_AGENT_COLLECTOR_BACKEND_SERVICES: oap:11800
+      SW_AGENT_FORCE_TLS: "true"
+      SW_AGENT_SSL_TRUSTED_CA_PATH: /app/ca/ca.crt
       SW_AGENT_INSTANCE: consumer-instance
       SERVER: medium:9092
-      SW_AGENT_SSL_CERT_CHAIN_PATH: ca/client.crt
-      SW_AGENT_SSL_KEY_PATH: ca/client.pem
+      SW_AGENT_SSL_CERT_CHAIN_PATH: /app/ca/client.crt
+      SW_AGENT_SSL_KEY_PATH: /app/ca/client.pem
     volumes:
       - ../../simple/mtls/client:/app/ca:ro
       - ../consumer.ts:/app/consumer.ts
@@ -104,7 +108,7 @@ services:
       medium:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD", "bash", "-c", "cat < /dev/null > /dev/tcp/127.0.0.1/5051" ]
+      test: [ "CMD", "bash", "-c", "cat < /dev/null > /dev/tcp/127.0.0.1/5001" ]
       interval: 5s
       timeout: 60s
       retries: 120
