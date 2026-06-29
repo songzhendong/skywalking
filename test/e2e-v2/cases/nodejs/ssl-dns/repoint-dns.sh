@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Repoint oap.test inside provider/consumer containers (DNS + TLS combo E2E).
+# Repoint oap inside provider/consumer containers (DNS + TLS combo E2E).
 set -euo pipefail
 MODE="${1:?usage: repoint-dns.sh good|bad}"
 
@@ -30,7 +30,7 @@ consumer_container() {
 repoint_container() {
   local cid="$1"
   local ip="$2"
-  docker exec "${cid}" bash -c "grep -v '[[:space:]]oap\\.test' /etc/hosts > /tmp/h && echo '${ip} oap.test' >> /tmp/h && cat /tmp/h > /etc/hosts"
+  docker exec "${cid}" bash -c "grep -vE '[[:space:]]oap([[:space:]]|$)' /etc/hosts > /tmp/h && echo '${ip} oap' >> /tmp/h && cat /tmp/h > /etc/hosts"
 }
 
 for cid in "$(provider_container)" "$(consumer_container)"; do
@@ -38,9 +38,9 @@ for cid in "$(provider_container)" "$(consumer_container)"; do
   if [[ "${MODE}" == "bad" ]]; then
     repoint_container "${cid}" "127.0.0.1"
   elif [[ "${MODE}" == "good" ]]; then
-    OIP="$(docker exec "${cid}" getent hosts oap | awk '{print $1; exit}')"
+    OIP="$(docker exec "${cid}" cat /tmp/oap-good-ip 2>/dev/null || true)"
     if [[ -z "${OIP}" ]]; then
-      echo "oap IP not found in ${cid}" >&2
+      echo "saved oap IP not found in ${cid} (/tmp/oap-good-ip)" >&2
       exit 1
     fi
     repoint_container "${cid}" "${OIP}"

@@ -20,10 +20,11 @@ set -euo pipefail
 APP_SCRIPT="${1:-provider.ts}"
 OIP="$(getent hosts oap | awk '{print $1; exit}')"
 if [[ -z "${OIP}" ]]; then
-  echo "oap IP not found for oap.test bootstrap" >&2
+  echo "oap IP not found for DNS bootstrap" >&2
   exit 1
 fi
-grep -v '[[:space:]]oap\.test' /etc/hosts > /tmp/hosts.oap || cp /etc/hosts /tmp/hosts.oap
-echo "${OIP} oap.test" >> /tmp/hosts.oap
+echo "${OIP}" > /tmp/oap-good-ip
+grep -vE '[[:space:]]oap([[:space:]]|$)' /etc/hosts > /tmp/hosts.oap || cp /etc/hosts /tmp/hosts.oap
+echo "${OIP} oap" >> /tmp/hosts.oap
 cat /tmp/hosts.oap > /etc/hosts
 exec npx ts-node "/app/${APP_SCRIPT}"

@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Node.js agent: TLS gRPC + periodic DNS re-resolve via oap.test (/etc/hosts).
+# Node.js agent: TLS gRPC + periodic DNS re-resolve via oap (/etc/hosts).
 
 services:
   oap:
@@ -49,12 +49,13 @@ services:
     expose:
       - 5000
     environment:
-      SW_AGENT_COLLECTOR_BACKEND_SERVICES: oap.test:11800
+      SW_AGENT_COLLECTOR_BACKEND_SERVICES: oap:11800
+      SW_AGENT_FORCE_TLS: "true"
+      SW_AGENT_SSL_TRUSTED_CA_PATH: /app/ca/ca.crt
       SW_AGENT_INSTANCE: provider-instance
       SW_AGENT_IS_RESOLVE_DNS_PERIODICALLY: "true"
       SW_AGENT_GRPC_CHANNEL_CHECK_INTERVAL: "1"
       SW_AGENT_FORCE_RECONNECTION_PERIOD: "1"
-      SW_AGENT_SSL_TARGET_NAME_OVERRIDE: oap
     volumes:
       - ../../simple/ssl/ca:/app/ca:ro
       - ../provider.ts:/app/provider.ts
@@ -93,13 +94,14 @@ services:
     ports:
       - 5001
     environment:
-      SW_AGENT_COLLECTOR_BACKEND_SERVICES: oap.test:11800
+      SW_AGENT_COLLECTOR_BACKEND_SERVICES: oap:11800
+      SW_AGENT_FORCE_TLS: "true"
+      SW_AGENT_SSL_TRUSTED_CA_PATH: /app/ca/ca.crt
       SW_AGENT_INSTANCE: consumer-instance
       SERVER: medium:9092
       SW_AGENT_IS_RESOLVE_DNS_PERIODICALLY: "true"
       SW_AGENT_GRPC_CHANNEL_CHECK_INTERVAL: "1"
       SW_AGENT_FORCE_RECONNECTION_PERIOD: "1"
-      SW_AGENT_SSL_TARGET_NAME_OVERRIDE: oap
     volumes:
       - ../../simple/ssl/ca:/app/ca:ro
       - ../consumer.ts:/app/consumer.ts
