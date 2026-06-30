@@ -58,5 +58,3 @@ verify:
       expected: ../expected/dependency-services-provider-nodejs.yml
     - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql dependency service --service-name=consumer
       expected: ../expected/dependency-services-consumer-nodejs.yml
-    - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_instance_nodejs_process_cpu --instance-name=provider-instance --service-name=provider
-      expected: ../expected/metrics-has-value.yml

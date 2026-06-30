@@ -15,7 +15,7 @@
 
 # Node.js agent TLS gRPC — mirrors Java simple/ssl layout:
 #   OAP: ../../simple/ssl/certs
-#   Agent: ../../simple/ssl/ca mounted at /app/ca (default ca/ca.crt, no extra env)
+#   Agent trust: server.crt (self-signed CN=oap; ca/ca.crt is a different cert in fixtures)
 
 services:
   oap:
@@ -53,10 +53,10 @@ services:
     environment:
       SW_AGENT_COLLECTOR_BACKEND_SERVICES: oap:11800
       SW_AGENT_FORCE_TLS: "true"
-      SW_AGENT_SSL_TRUSTED_CA_PATH: /app/ca/ca.crt
+      SW_AGENT_SSL_TRUSTED_CA_PATH: /app/certs/server.crt
       SW_AGENT_INSTANCE: provider-instance
     volumes:
-      - ../../simple/ssl/ca:/app/ca:ro
+      - ../../simple/ssl/certs:/app/certs:ro
       - ../provider.ts:/app/provider.ts
     depends_on:
       oap:
@@ -74,6 +74,8 @@ services:
       service: consumer
     environment:
       PROVIDER_URL: http://provider:5000
+    volumes:
+      - ../../simple/ssl/certs/server.crt:/skywalking/agent/ca/ca.crt:ro
     depends_on:
       oap:
         condition: service_healthy
@@ -94,11 +96,11 @@ services:
     environment:
       SW_AGENT_COLLECTOR_BACKEND_SERVICES: oap:11800
       SW_AGENT_FORCE_TLS: "true"
-      SW_AGENT_SSL_TRUSTED_CA_PATH: /app/ca/ca.crt
+      SW_AGENT_SSL_TRUSTED_CA_PATH: /app/certs/server.crt
       SW_AGENT_INSTANCE: consumer-instance
       SERVER: medium:9092
     volumes:
-      - ../../simple/ssl/ca:/app/ca:ro
+      - ../../simple/ssl/certs:/app/certs:ro
       - ../consumer.ts:/app/consumer.ts
     depends_on:
       oap:
