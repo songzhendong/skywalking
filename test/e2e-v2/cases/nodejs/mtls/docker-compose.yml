@@ -13,24 +13,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Node.js agent mTLS gRPC — mirrors Java simple/mtls (client + server certs).
+# Server trust: server/server.crt (self-signed; client/ca.crt does not verify it)
+# Server trust: server/server.crt (self-signed; client/ca.crt does not verify it)
+
 services:
   oap:
     extends:
-      file: ../../script/docker-compose/base-compose.yml
+      file: ../../../script/docker-compose/base-compose.yml
       service: oap
+    volumes:
+      - ../../simple/mtls/server:/skywalking/certs
+    environment:
+      SW_CORE_GRPC_SSL_ENABLED: "true"
+      SW_CORE_GRPC_SSL_KEY_PATH: /skywalking/certs/server.pem
+      SW_CORE_GRPC_SSL_CERT_CHAIN_PATH: /skywalking/certs/server.crt
+      SW_CORE_GRPC_SSL_TRUSTED_CA_PATH: /skywalking/certs/ca.crt
     ports:
       - 12800
 
   banyandb:
     extends:
-      file: ../../script/docker-compose/base-compose.yml
+      file: ../../../script/docker-compose/base-compose.yml
       service: banyandb
     ports:
       - 17912
 
   provider:
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile.nodejs
       args:
         - SW_AGENT_NODEJS_REPO=${SW_AGENT_NODEJS_REPO}
@@ -41,9 +52,15 @@ services:
       - 5000
     environment:
       SW_AGENT_COLLECTOR_BACKEND_SERVICES: oap:11800
+      SW_AGENT_FORCE_TLS: "true"
+      SW_AGENT_SSL_TRUSTED_CA_PATH: /app/server/server.crt
       SW_AGENT_INSTANCE: provider-instance
+      SW_AGENT_SSL_CERT_CHAIN_PATH: /app/ca/client.crt
+      SW_AGENT_SSL_KEY_PATH: /app/ca/client.pem
     volumes:
-      - ./provider.ts:/app/provider.ts
+      - ../../simple/mtls/client:/app/ca:ro
+      - ../../simple/mtls/server:/app/server:ro
+      - ../provider.ts:/app/provider.ts
     depends_on:
       oap:
         condition: service_healthy
@@ -56,10 +73,15 @@ services:
 
   medium:
     extends:
-      file: ../../script/docker-compose/base-compose.yml
+      file: ../../../script/docker-compose/base-compose.yml
       service: consumer
     environment:
       PROVIDER_URL: http://provider:5000
+      SW_AGENT_SSL_KEY_PATH: /certs/client.pem
+      SW_AGENT_SSL_CERT_CHAIN_PATH: /certs/client.crt
+    volumes:
+      - ../../simple/mtls/client:/skywalking/agent/certs:ro
+      - ../../simple/mtls/server/server.crt:/skywalking/agent/ca/ca.crt:ro
     depends_on:
       oap:
         condition: service_healthy
@@ -68,7 +90,7 @@ services:
 
   consumer:
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile.nodejs
       args:
         - SW_AGENT_NODEJS_REPO=${SW_AGENT_NODEJS_REPO}
@@ -79,10 +101,16 @@ services:
       - 5001
     environment:
       SW_AGENT_COLLECTOR_BACKEND_SERVICES: oap:11800
+      SW_AGENT_FORCE_TLS: "true"
+      SW_AGENT_SSL_TRUSTED_CA_PATH: /app/server/server.crt
       SW_AGENT_INSTANCE: consumer-instance
       SERVER: medium:9092
+      SW_AGENT_SSL_CERT_CHAIN_PATH: /app/ca/client.crt
+      SW_AGENT_SSL_KEY_PATH: /app/ca/client.pem
     volumes:
-      - ./consumer.ts:/app/consumer.ts
+      - ../../simple/mtls/client:/app/ca:ro
+      - ../../simple/mtls/server:/app/server:ro
+      - ../consumer.ts:/app/consumer.ts
     depends_on:
       oap:
         condition: service_healthy
