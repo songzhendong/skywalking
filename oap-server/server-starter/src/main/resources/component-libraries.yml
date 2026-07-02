@@ -158,10 +158,10 @@ postgresql-jdbc-driver:
   languages: Java
 rocketMQ-producer:
   id: 38
-  languages: Java,Golang
+  languages: Java,Golang,Python
 rocketMQ-consumer:
   id: 39
-  languages: Java,Golang
+  languages: Java,Golang,Python
 kafka-producer:
   id: 40
   languages: Java,Python,Golang

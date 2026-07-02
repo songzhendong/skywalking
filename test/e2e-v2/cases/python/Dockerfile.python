@@ -14,11 +14,12 @@
 # limitations under the License.
 
 FROM python:3.10
+ARG SW_AGENT_PYTHON_GIT_URL=https://github.com/apache/skywalking-python.git
 ARG SW_AGENT_PYTHON_COMMIT
 
 WORKDIR /app
 
-RUN git clone https://github.com/apache/skywalking-python.git $(pwd)
+RUN git clone ${SW_AGENT_PYTHON_GIT_URL} $(pwd)
 
 RUN git reset --hard ${SW_AGENT_PYTHON_COMMIT} && git submodule update --init
 

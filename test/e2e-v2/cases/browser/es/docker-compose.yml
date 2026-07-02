@@ -47,6 +47,7 @@ services:
       context: ./../
       dockerfile: docker/Dockerfile.provider
       args:
+        - SW_AGENT_PYTHON_GIT_URL=${SW_AGENT_PYTHON_GIT_URL:-https://github.com/apache/skywalking-python.git}
         - SW_AGENT_PYTHON_COMMIT=${SW_AGENT_PYTHON_COMMIT}
     command: [ 'python3', '/entrypoint.py' ]
     networks:
