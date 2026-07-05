@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -12,21 +14,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+set -euo pipefail
 
-FROM node:20
-
-# Default upstream repo; override via SW_AGENT_NODEJS_REPO (e.g. internal fork).
-ARG SW_AGENT_NODEJS_REPO=https://github.com/apache/skywalking-nodejs.git
-ARG SW_AGENT_NODEJS_COMMIT
-
-WORKDIR /app
-
-EXPOSE 5050 5051
-
-RUN git clone "${SW_AGENT_NODEJS_REPO}" .
-
-RUN git reset --hard "${SW_AGENT_NODEJS_COMMIT}" && git submodule update --init
-
-RUN npm install
-RUN npm run generate-source
-RUN npm install express axios
+APP_SCRIPT="${1:-provider.ts}"
+OIP="$(getent hosts oap | awk '{print $1; exit}')"
+if [[ -z "${OIP}" ]]; then
+  echo "oap IP not found for DNS bootstrap" >&2
+  exit 1
+fi
+echo "${OIP}" > /tmp/oap-good-ip
+grep -vE '[[:space:]]oap([[:space:]]|$)' /etc/hosts > /tmp/hosts.oap || cp /etc/hosts /tmp/hosts.oap
+echo "${OIP} oap" >> /tmp/hosts.oap
+cat /tmp/hosts.oap > /etc/hosts
+exec npx ts-node "/app/${APP_SCRIPT}"

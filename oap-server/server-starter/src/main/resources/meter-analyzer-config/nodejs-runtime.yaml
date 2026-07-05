@@ -1,3 +1,4 @@
+# Node.js runtime metrics via MeterReportService (instance_nodejs_*).
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -12,8 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# Node.js runtime metrics via MeterReportService (instance_nodejs_*).
 
 expSuffix: instance(['service'], ['instance'], Layer.GENERAL)
 metricPrefix: meter
@@ -30,3 +29,15 @@ metricsRules:
     exp: instance_nodejs_rss
   - name: instance_nodejs_external_memory
     exp: instance_nodejs_external_memory
+  - name: instance_nodejs_array_buffers
+    exp: instance_nodejs_array_buffers
+  - name: instance_nodejs_uptime
+    exp: instance_nodejs_uptime
+  - name: instance_nodejs_peak_malloced_memory
+    exp: instance_nodejs_peak_malloced_memory
+  - name: instance_nodejs_detached_contexts
+    exp: instance_nodejs_detached_contexts
+  - name: instance_nodejs_old_space_used
+    exp: instance_nodejs_old_space_used
+  - name: instance_nodejs_new_space_used
+    exp: instance_nodejs_new_space_used

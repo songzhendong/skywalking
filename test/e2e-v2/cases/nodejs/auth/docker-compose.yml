@@ -13,24 +13,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Node.js agent auth gRPC — mirrors Java test/e2e-v2/cases/simple/auth layout.
+
 services:
   oap:
     extends:
-      file: ../../script/docker-compose/base-compose.yml
+      file: ../../../script/docker-compose/base-compose.yml
       service: oap
+    environment:
+      SW_AUTHENTICATION: test-token
     ports:
       - 12800
 
   banyandb:
     extends:
-      file: ../../script/docker-compose/base-compose.yml
+      file: ../../../script/docker-compose/base-compose.yml
       service: banyandb
     ports:
       - 17912
 
   provider:
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile.nodejs
       args:
         - SW_AGENT_NODEJS_REPO=${SW_AGENT_NODEJS_REPO}
@@ -41,9 +45,10 @@ services:
       - 5000
     environment:
       SW_AGENT_COLLECTOR_BACKEND_SERVICES: oap:11800
+      SW_AGENT_AUTHENTICATION: test-token
       SW_AGENT_INSTANCE: provider-instance
     volumes:
-      - ./provider.ts:/app/provider.ts
+      - ../provider.ts:/app/provider.ts
     depends_on:
       oap:
         condition: service_healthy
@@ -56,10 +61,11 @@ services:
 
   medium:
     extends:
-      file: ../../script/docker-compose/base-compose.yml
+      file: ../../../script/docker-compose/base-compose.yml
       service: consumer
     environment:
       PROVIDER_URL: http://provider:5000
+      SW_AGENT_AUTHENTICATION: test-token
     depends_on:
       oap:
         condition: service_healthy
@@ -68,7 +74,7 @@ services:
 
   consumer:
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile.nodejs
       args:
         - SW_AGENT_NODEJS_REPO=${SW_AGENT_NODEJS_REPO}
@@ -79,10 +85,11 @@ services:
       - 5001
     environment:
       SW_AGENT_COLLECTOR_BACKEND_SERVICES: oap:11800
+      SW_AGENT_AUTHENTICATION: test-token
       SW_AGENT_INSTANCE: consumer-instance
       SERVER: medium:9092
     volumes:
-      - ./consumer.ts:/app/consumer.ts
+      - ../consumer.ts:/app/consumer.ts
     depends_on:
       oap:
         condition: service_healthy

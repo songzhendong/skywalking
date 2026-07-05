@@ -7,7 +7,7 @@ The SkyWalking Node.js agent reports **runtime metrics** (process memory and CPU
 ## Platform support
 
 Runtime meters are collected on **Linux, macOS, and Windows** via Node.js built-in APIs
-(`process.memoryUsage()`, `process.cpuUsage()`, `v8.getHeapStatistics()`).
+(`process.memoryUsage()`, `process.cpuUsage()`, `process.uptime()`, `v8.getHeapStatistics()`, `v8.getHeapSpaceStatistics()`).
 
 ## Data flow
 
@@ -63,6 +63,13 @@ The agent reports raw meter names; OAP prefixes them with `meter_` when exposing
 | bytes | `instance_nodejs_heap_limit` | `meter_instance_nodejs_heap_limit` | V8 max heap size | SkyWalking Node.js Agent |
 | bytes | `instance_nodejs_rss` | `meter_instance_nodejs_rss` | Resident set size | SkyWalking Node.js Agent |
 | bytes | `instance_nodejs_external_memory` | `meter_instance_nodejs_external_memory` | External memory | SkyWalking Node.js Agent |
+| bytes | `instance_nodejs_array_buffers` | `meter_instance_nodejs_array_buffers` | ArrayBuffer / SharedArrayBuffer memory | SkyWalking Node.js Agent |
+| s | `instance_nodejs_uptime` | `meter_instance_nodejs_uptime` | Process uptime | SkyWalking Node.js Agent |
+| bytes | `instance_nodejs_peak_malloced_memory` | `meter_instance_nodejs_peak_malloced_memory` | Peak V8 malloced memory | SkyWalking Node.js Agent |
+| — | `instance_nodejs_detached_contexts` | `meter_instance_nodejs_detached_contexts` | Detached V8 contexts | SkyWalking Node.js Agent |
+| bytes | `instance_nodejs_old_space_used` | `meter_instance_nodejs_old_space_used` | V8 old generation heap used | SkyWalking Node.js Agent |
+| bytes | `instance_nodejs_new_space_used` | `meter_instance_nodejs_new_space_used` | V8 new generation heap used | SkyWalking Node.js Agent |
+
 
 ## Customizations
 

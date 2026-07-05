@@ -256,6 +256,7 @@
 
 #### OAP Server
 * Add Node.js runtime metrics via the Node.js agent **`MeterReportService`** pipeline (`meter_instance_nodejs_*`, 1s collect/report). OAP analyzes raw meters through `nodejs-runtime.yaml`. Node.js E2E asserts six `meter_instance_nodejs_*` metrics (`test/e2e-v2/cases/nodejs/e2e.yaml`).
+* Extend Node.js runtime meters to twelve `instance_nodejs_*` metrics (six additional V8/process gauges) and add Node.js agent TLS/DNS/mTLS/auth E2E cases under `test/e2e-v2/cases/nodejs/{ssl,mtls,ssl-dns,auth}`.
 * Add PHP runtime PHM meter analyzer (`php-runtime.yaml`) for SkyWalking PHP agent process
   metrics (CPU, memory, virtual memory, thread count, open file descriptors sampled from
   `/proc` on Linux). Registers six `meter_instance_php_*` metrics on the General Service

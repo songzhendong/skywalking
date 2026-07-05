@@ -13,24 +13,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Node.js agent: TLS gRPC + periodic DNS re-resolve via oap (/etc/hosts).
+# Agent trust: server.crt (self-signed CN=oap; ca/ca.crt is a different cert in fixtures)
+# Agent trust: server.crt (self-signed CN=oap; ca/ca.crt is a different cert in fixtures)
+
 services:
   oap:
     extends:
-      file: ../../script/docker-compose/base-compose.yml
+      file: ../../../script/docker-compose/base-compose.yml
       service: oap
+    volumes:
+      - ../../simple/ssl/certs:/skywalking/certs
+    environment:
+      SW_CORE_GRPC_SSL_ENABLED: "true"
+      SW_CORE_GRPC_SSL_KEY_PATH: /skywalking/certs/server-key.pem
+      SW_CORE_GRPC_SSL_CERT_CHAIN_PATH: /skywalking/certs/server.crt
+      SW_CORE_GRPC_SSL_TRUSTED_CA_PATH: /skywalking/certs/ca.crt
     ports:
       - 12800
 
   banyandb:
     extends:
-      file: ../../script/docker-compose/base-compose.yml
+      file: ../../../script/docker-compose/base-compose.yml
       service: banyandb
     ports:
       - 17912
 
   provider:
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile.nodejs
       args:
         - SW_AGENT_NODEJS_REPO=${SW_AGENT_NODEJS_REPO}
@@ -41,9 +52,16 @@ services:
       - 5000
     environment:
       SW_AGENT_COLLECTOR_BACKEND_SERVICES: oap:11800
+      SW_AGENT_FORCE_TLS: "true"
+      SW_AGENT_SSL_TRUSTED_CA_PATH: /app/certs/server.crt
       SW_AGENT_INSTANCE: provider-instance
+      SW_AGENT_IS_RESOLVE_DNS_PERIODICALLY: "true"
+      SW_AGENT_GRPC_CHANNEL_CHECK_INTERVAL: "1"
+      SW_AGENT_FORCE_RECONNECTION_PERIOD: "1"
     volumes:
-      - ./provider.ts:/app/provider.ts
+      - ../../simple/ssl/certs:/app/certs:ro
+      - ../provider.ts:/app/provider.ts
+      - ./entrypoint.sh:/entrypoint.sh:ro
     depends_on:
       oap:
         condition: service_healthy
@@ -52,14 +70,16 @@ services:
       interval: 5s
       timeout: 60s
       retries: 120
-    entrypoint: [ 'npx', 'ts-node', '/app/provider.ts' ]
+    entrypoint: [ "bash", "/entrypoint.sh", "provider.ts" ]
 
   medium:
     extends:
-      file: ../../script/docker-compose/base-compose.yml
+      file: ../../../script/docker-compose/base-compose.yml
       service: consumer
     environment:
       PROVIDER_URL: http://provider:5000
+    volumes:
+      - ../../simple/ssl/certs/server.crt:/skywalking/agent/ca/ca.crt:ro
     depends_on:
       oap:
         condition: service_healthy
@@ -68,7 +88,7 @@ services:
 
   consumer:
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile.nodejs
       args:
         - SW_AGENT_NODEJS_REPO=${SW_AGENT_NODEJS_REPO}
@@ -79,10 +99,17 @@ services:
       - 5001
     environment:
       SW_AGENT_COLLECTOR_BACKEND_SERVICES: oap:11800
+      SW_AGENT_FORCE_TLS: "true"
+      SW_AGENT_SSL_TRUSTED_CA_PATH: /app/certs/server.crt
       SW_AGENT_INSTANCE: consumer-instance
       SERVER: medium:9092
+      SW_AGENT_IS_RESOLVE_DNS_PERIODICALLY: "true"
+      SW_AGENT_GRPC_CHANNEL_CHECK_INTERVAL: "1"
+      SW_AGENT_FORCE_RECONNECTION_PERIOD: "1"
     volumes:
-      - ./consumer.ts:/app/consumer.ts
+      - ../../simple/ssl/certs:/app/certs:ro
+      - ../consumer.ts:/app/consumer.ts
+      - ./entrypoint.sh:/entrypoint.sh:ro
     depends_on:
       oap:
         condition: service_healthy
@@ -93,7 +120,7 @@ services:
       interval: 5s
       timeout: 60s
       retries: 120
-    entrypoint: [ 'npx', 'ts-node', '/app/consumer.ts' ]
+    entrypoint: [ "bash", "/entrypoint.sh", "consumer.ts" ]
 
 networks:
   e2e:
