@@ -50,11 +50,15 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static java.util.Comparator.comparing;
+import static java.util.Comparator.comparingInt;
 import static java.util.Objects.nonNull;
 import static java.util.function.Predicate.not;
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
 @Slf4j
@@ -192,6 +196,10 @@ public class JDBCTraceQueryDAO implements ITraceQueryDAO {
                     break;
             }
 
+            // Fetch enough rows from each day table to cover the global page window
+            // (from + limit). Global sort + skip/limit below merge day partitions —
+            // same pattern as JDBCLogQueryDAO. Per-table OFFSET would skip different
+            // rows on each day and return unsorted / wrong pages across day boundaries.
             buildLimit(sql, from, limit);
 
             jdbcClient.executeQuery(
@@ -223,12 +231,33 @@ public class JDBCTraceQueryDAO implements ITraceQueryDAO {
                 parameters.toArray(new Object[0]));
         }
 
-        return new TraceBrief(traces); // TODO: sort,
+        final Comparator<BasicTrace> comparator;
+        switch (queryOrder) {
+            case BY_DURATION:
+                comparator = comparingInt(BasicTrace::getDuration).reversed();
+                break;
+            case BY_START_TIME:
+            default:
+                comparator = comparing((BasicTrace t) -> Long.parseLong(t.getStart())).reversed();
+                break;
+        }
+
+        return new TraceBrief(
+            traces.stream()
+                  .sorted(comparator)
+                  .skip(from)
+                  .limit(limit)
+                  .collect(toList())
+        );
     }
 
+    /**
+     * Per-table row cap for a multi-day merge. Takes the first {@code from + limit} rows of
+     * each day table (no OFFSET); callers must apply global {@code skip(from).limit(limit)}
+     * after merging, matching {@link JDBCLogQueryDAO}.
+     */
     protected void buildLimit(StringBuilder sql, int from, int limit) {
-        sql.append(" LIMIT ").append(limit);
-        sql.append(" OFFSET ").append(from);
+        sql.append(" LIMIT ").append(from + limit);
     }
 
     @Override
