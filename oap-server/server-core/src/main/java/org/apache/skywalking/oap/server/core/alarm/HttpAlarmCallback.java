@@ -30,9 +30,21 @@ import java.util.List;
 import java.util.Map;
 
 public abstract class HttpAlarmCallback implements AlarmCallback {
+    /**
+     * Shared timeout for TCP connect and the HTTP request/response exchange.
+     * {@link HttpRequest.Builder#timeout(Duration)} already bounds the overall request,
+     * including obtaining a connection. An explicit
+     * {@link HttpClient.Builder#connectTimeout(Duration)} still matters: it caps the
+     * connection phase separately and fails with
+     * {@link java.net.http.HttpConnectTimeoutException}, so a slow or unreachable webhook
+     * does not hold the single AlarmCore delivery thread during connect longer than needed.
+     */
+    private static final Duration TIMEOUT = Duration.ofSeconds(12);
+
     private static final HttpClient HTTP_CLIENT = HttpClient
             .newBuilder()
             .followRedirects(HttpClient.Redirect.NORMAL)
+            .connectTimeout(TIMEOUT)
             .build();
 
     protected String post(
@@ -45,7 +57,7 @@ public abstract class HttpAlarmCallback implements AlarmCallback {
                 .uri(uri)
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .header("Content-Type", "application/json")
-                .timeout(Duration.ofSeconds(12));
+                .timeout(TIMEOUT);
         headers.forEach(request::header);
 
         final var response = HTTP_CLIENT
