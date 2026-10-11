@@ -18,27 +18,27 @@
 
 package org.apache.skywalking.oap.server.core.alarm;
 
+import org.apache.skywalking.oap.server.library.util.JdkHttpClientUtils;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
 public abstract class HttpAlarmCallback implements AlarmCallback {
     /**
-     * Default shared timeout (seconds) for TCP connect and the HTTP request/response exchange.
+     * Default end-to-end HTTP delivery deadline (seconds), including reading the response body.
      * Overridable via {@code alarm.default.httpTimeout} / {@code SW_ALARM_HTTP_TIMEOUT}.
-     * {@link HttpRequest.Builder#timeout(Duration)} already bounds the overall request,
-     * including obtaining a connection. An explicit
-     * {@link HttpClient.Builder#connectTimeout(Duration)} still matters: it caps the
-     * connection phase separately and fails with
-     * {@link java.net.http.HttpConnectTimeoutException}, so a slow or unreachable webhook
-     * does not hold the single AlarmCore delivery thread during connect longer than needed.
+     * The same duration is applied to {@link HttpClient.Builder#connectTimeout(Duration)} and
+     * {@link HttpRequest.Builder#timeout(Duration)}. Body consumption is bounded by
+     * {@link JdkHttpClientUtils}, because {@code HttpRequest} timeout stops when the response
+     * headers arrive. The explicit connect timeout still fails a slow or unreachable webhook
+     * with {@link java.net.http.HttpConnectTimeoutException}, so it does not hold the single
+     * AlarmCore delivery thread during connect longer than this deadline.
      */
     private static final long DEFAULT_HTTP_TIMEOUT_SECONDS = 12;
 
@@ -56,7 +56,8 @@ public abstract class HttpAlarmCallback implements AlarmCallback {
 
     /**
      * Apply HTTP timeouts from alarm module configuration. Values {@code <= 0} fall back to
-     * {@link #DEFAULT_HTTP_TIMEOUT_SECONDS}. The same duration is used for connect and request.
+     * {@link #DEFAULT_HTTP_TIMEOUT_SECONDS}. The same duration is the end-to-end delivery
+     * deadline, including connect and reading the response body.
      */
     public static synchronized void configure(final long httpTimeoutSeconds) {
         final long seconds = httpTimeoutSeconds > 0 ? httpTimeoutSeconds : DEFAULT_HTTP_TIMEOUT_SECONDS;
@@ -69,16 +70,16 @@ public abstract class HttpAlarmCallback implements AlarmCallback {
             final String body,
             final Map<String, String> headers)
             throws IOException, InterruptedException {
+        final Duration timeout = REQUEST_TIMEOUT;
         final var request = HttpRequest
                 .newBuilder()
                 .uri(uri)
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .header("Content-Type", "application/json")
-                .timeout(REQUEST_TIMEOUT);
+                .timeout(timeout);
         headers.forEach(request::header);
 
-        final var response = HTTP_CLIENT
-                .send(request.build(), HttpResponse.BodyHandlers.ofString());
+        final var response = JdkHttpClientUtils.sendStringWithTimeout(HTTP_CLIENT, request.build(), timeout);
 
         final var status = response.statusCode();
         // Any 2xx means the hook endpoint accepted the alarm. Asynchronous intake APIs answer with 202 rather

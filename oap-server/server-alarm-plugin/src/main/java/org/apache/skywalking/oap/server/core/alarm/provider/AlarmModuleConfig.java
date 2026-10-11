@@ -29,7 +29,7 @@ import org.apache.skywalking.oap.server.library.module.ModuleConfig;
 @Setter
 public class AlarmModuleConfig extends ModuleConfig {
     /**
-     * Shared timeout (seconds) for HTTP alarm hook TCP connect and request/response exchange.
+     * End-to-end HTTP delivery deadline (seconds), including TCP connect and reading the response body.
      * Applied to WeChat / Feishu / etc. HTTP hooks that go through {@code HttpAlarmCallback}.
      */
     private long httpTimeout = 12;

@@ -156,7 +156,7 @@ For example, you can configure two Slack hooks, one id is `default` and set `is-
 Another id is `custom1` will only apply on the `Alarm Rules` which **with config** `hooks` and include the id `slack.custom1`.
 
 ### HTTP delivery timeout
-HTTP-based hooks (WeChat, Feishu, etc.) share one timeout for TCP connect and the HTTP request/response exchange.
+HTTP-based hooks (WeChat, Feishu, etc.) share one end-to-end delivery deadline. It bounds TCP connect, waiting for the response, and reading the response body. The same value is also applied to `HttpClient.connectTimeout` and `HttpRequest.timeout`.
 Configure it in `config/application.yml` (not in `alarm-settings.yml`):
 
 ```yaml

@@ -599,8 +599,8 @@ traceQL:
 alarm:
   selector: ${SW_ALARM:default}
   default:
-    # Shared timeout (seconds) for HTTP alarm hooks (WeChat / Feishu / etc.):
-    # TCP connectTimeout and HttpRequest timeout both use this value.
+    # End-to-end HTTP delivery deadline (seconds) for alarm hooks (WeChat / Feishu / etc.),
+    # including TCP connect and reading the response body.
     httpTimeout: ${SW_ALARM_HTTP_TIMEOUT:12}
 
 telemetry:
