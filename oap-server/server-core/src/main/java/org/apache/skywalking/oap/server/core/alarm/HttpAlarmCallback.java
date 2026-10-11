@@ -18,38 +18,68 @@
 
 package org.apache.skywalking.oap.server.core.alarm;
 
+import org.apache.skywalking.oap.server.library.util.JdkHttpClientUtils;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
 public abstract class HttpAlarmCallback implements AlarmCallback {
-    private static final HttpClient HTTP_CLIENT = HttpClient
+    /**
+     * Default end-to-end HTTP delivery deadline (seconds), including reading the response body.
+     * Overridable via {@code alarm.default.httpTimeout} / {@code SW_ALARM_HTTP_TIMEOUT}.
+     * The same duration is applied to {@link HttpClient.Builder#connectTimeout(Duration)} and
+     * {@link HttpRequest.Builder#timeout(Duration)}. Body consumption is bounded by
+     * {@link JdkHttpClientUtils}, because {@code HttpRequest} timeout stops when the response
+     * headers arrive. The explicit connect timeout still fails a slow or unreachable webhook
+     * with {@link java.net.http.HttpConnectTimeoutException}, so it does not hold the single
+     * AlarmCore delivery thread during connect longer than this deadline.
+     */
+    private static final long DEFAULT_HTTP_TIMEOUT_SECONDS = 12;
+
+    private static volatile Duration REQUEST_TIMEOUT = Duration.ofSeconds(DEFAULT_HTTP_TIMEOUT_SECONDS);
+
+    private static volatile HttpClient HTTP_CLIENT = newHttpClient(REQUEST_TIMEOUT);
+
+    private static HttpClient newHttpClient(final Duration connectTimeout) {
+        return HttpClient
             .newBuilder()
             .followRedirects(HttpClient.Redirect.NORMAL)
+            .connectTimeout(connectTimeout)
             .build();
+    }
+
+    /**
+     * Apply HTTP timeouts from alarm module configuration. Values {@code <= 0} fall back to
+     * {@link #DEFAULT_HTTP_TIMEOUT_SECONDS}. The same duration is the end-to-end delivery
+     * deadline, including connect and reading the response body.
+     */
+    public static synchronized void configure(final long httpTimeoutSeconds) {
+        final long seconds = httpTimeoutSeconds > 0 ? httpTimeoutSeconds : DEFAULT_HTTP_TIMEOUT_SECONDS;
+        REQUEST_TIMEOUT = Duration.ofSeconds(seconds);
+        HTTP_CLIENT = newHttpClient(REQUEST_TIMEOUT);
+    }
 
     protected String post(
             final URI uri,
             final String body,
             final Map<String, String> headers)
             throws IOException, InterruptedException {
+        final Duration timeout = REQUEST_TIMEOUT;
         final var request = HttpRequest
                 .newBuilder()
                 .uri(uri)
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .header("Content-Type", "application/json")
-                .timeout(Duration.ofSeconds(12));
+                .timeout(timeout);
         headers.forEach(request::header);
 
-        final var response = HTTP_CLIENT
-                .send(request.build(), HttpResponse.BodyHandlers.ofString());
+        final var response = JdkHttpClientUtils.sendStringWithTimeout(HTTP_CLIENT, request.build(), timeout);
 
         final var status = response.statusCode();
         // Any 2xx means the hook endpoint accepted the alarm. Asynchronous intake APIs answer with 202 rather

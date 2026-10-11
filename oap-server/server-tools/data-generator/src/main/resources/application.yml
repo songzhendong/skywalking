@@ -222,6 +222,9 @@ query:
 alarm:
   selector: ${SW_ALARM:default}
   default:
+    # End-to-end HTTP delivery deadline (seconds) for alarm hooks (WeChat / Feishu / etc.),
+    # including TCP connect and reading the response body.
+    httpTimeout: ${SW_ALARM_HTTP_TIMEOUT:12}
 
 telemetry:
   selector: ${SW_TELEMETRY:none}
