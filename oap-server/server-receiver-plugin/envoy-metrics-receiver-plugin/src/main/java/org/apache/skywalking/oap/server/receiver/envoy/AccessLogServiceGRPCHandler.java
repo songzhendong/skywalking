@@ -36,6 +36,7 @@ import org.apache.skywalking.oap.server.library.module.ModuleManager;
 import org.apache.skywalking.oap.server.library.module.ModuleStartException;
 import org.apache.skywalking.oap.server.receiver.envoy.als.ALSHTTPAnalysis;
 import org.apache.skywalking.oap.server.receiver.envoy.als.AccessLogAnalyzer;
+import org.apache.skywalking.oap.server.receiver.envoy.als.LogEntry2MetricsAdapter.UnrepresentableAlsDurationException;
 import org.apache.skywalking.oap.server.receiver.envoy.als.Role;
 import org.apache.skywalking.oap.server.receiver.envoy.als.tcp.TCPAccessLogAnalyzer;
 import org.apache.skywalking.oap.server.telemetry.TelemetryModule;
@@ -140,12 +141,19 @@ public class AccessLogServiceGRPCHandler extends AccessLogServiceGrpc.AccessLogS
                             counter.inc(httpLogs.getLogEntryCount());
 
                             for (final HTTPAccessLogEntry httpLog : httpLogs.getLogEntryList()) {
-                                AccessLogAnalyzer.Result result = AccessLogAnalyzer.Result.builder().build();
-                                for (ALSHTTPAnalysis analysis : envoyHTTPAnalysisList) {
-                                    result = analysis.analysis(result, identifier, httpLog, role);
-                                }
-                                if (result.hasResult()) {
-                                    httpMetrics.addAllMetrics(result.getMetrics().getHttpMetrics().getMetricsList());
+                                try {
+                                    AccessLogAnalyzer.Result result = AccessLogAnalyzer.Result.builder().build();
+                                    for (ALSHTTPAnalysis analysis : envoyHTTPAnalysisList) {
+                                        result = analysis.analysis(result, identifier, httpLog, role);
+                                    }
+                                    if (result.hasResult()) {
+                                        httpMetrics.addAllMetrics(result.getMetrics().getHttpMetrics().getMetricsList());
+                                    }
+                                } catch (final UnrepresentableAlsDurationException e) {
+                                    LOGGER.warn(
+                                        "Rejecting one Envoy HTTP access log entry because a duration does not fit in nanoseconds: {}",
+                                        e.getMessage()
+                                    );
                                 }
                             }
                             sourceResult.setHttpMetrics(httpMetrics);
@@ -157,12 +165,19 @@ public class AccessLogServiceGRPCHandler extends AccessLogServiceGrpc.AccessLogS
                             counter.inc(tcpLogs.getLogEntryCount());
 
                             for (final TCPAccessLogEntry tcpLog : tcpLogs.getLogEntryList()) {
-                                AccessLogAnalyzer.Result result = AccessLogAnalyzer.Result.builder().build();
-                                for (TCPAccessLogAnalyzer analyzer : envoyTCPAnalysisList) {
-                                    result = analyzer.analysis(result, identifier, tcpLog, role);
-                                }
-                                if (result.hasResult()) {
-                                    tcpMetrics.addAllMetrics(result.getMetrics().getTcpMetrics().getMetricsList());
+                                try {
+                                    AccessLogAnalyzer.Result result = AccessLogAnalyzer.Result.builder().build();
+                                    for (TCPAccessLogAnalyzer analyzer : envoyTCPAnalysisList) {
+                                        result = analyzer.analysis(result, identifier, tcpLog, role);
+                                    }
+                                    if (result.hasResult()) {
+                                        tcpMetrics.addAllMetrics(result.getMetrics().getTcpMetrics().getMetricsList());
+                                    }
+                                } catch (final UnrepresentableAlsDurationException e) {
+                                    LOGGER.warn(
+                                        "Rejecting one Envoy TCP access log entry because a duration does not fit in nanoseconds: {}",
+                                        e.getMessage()
+                                    );
                                 }
                             }
                             sourceResult.setTcpMetrics(tcpMetrics);

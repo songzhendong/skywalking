@@ -30,6 +30,8 @@ import org.apache.skywalking.apm.network.servicemesh.v3.TCPServiceMeshMetric;
 import org.apache.skywalking.oap.server.receiver.envoy.als.ServiceMetaInfo;
 
 import static org.apache.skywalking.oap.server.receiver.envoy.als.LogEntry2MetricsAdapter.formatAsLong;
+import static org.apache.skywalking.oap.server.receiver.envoy.als.LogEntry2MetricsAdapter.formatAsNanos;
+import static org.apache.skywalking.oap.server.receiver.envoy.als.LogEntry2MetricsAdapter.subtractNanos;
 import static org.apache.skywalking.oap.server.receiver.envoy.als.LogEntry2MetricsAdapter.parseInternalErrorCode;
 import static org.apache.skywalking.oap.server.receiver.envoy.als.LogEntry2MetricsAdapter.parseTLS;
 
@@ -86,10 +88,11 @@ public class TCPLogEntry2MetricsAdapter {
         final ConnectionProperties connectionProperties = entry.getConnectionProperties();
         final String tlsMode = parseTLS(properties.getTlsProperties());
         final String internalErrorCode = parseInternalErrorCode(properties.getResponseFlags());
-        final long internalRequestLatencyNanos = properties.getTimeToFirstUpstreamTxByte().getNanos();
-        final long internalResponseLatencyNanos =
-            properties.getTimeToLastDownstreamTxByte().getNanos()
-                - properties.getTimeToFirstUpstreamRxByte().getNanos();
+        // Duration.getNanos() is only the fractional second; total nanos need seconds too.
+        final long internalRequestLatencyNanos = formatAsNanos(properties.getTimeToFirstUpstreamTxByte());
+        final long internalResponseLatencyNanos = subtractNanos(
+            formatAsNanos(properties.getTimeToLastDownstreamTxByte()),
+            formatAsNanos(properties.getTimeToFirstUpstreamRxByte()));
 
         final TCPServiceMeshMetric.Builder builder =
             TCPServiceMeshMetric
