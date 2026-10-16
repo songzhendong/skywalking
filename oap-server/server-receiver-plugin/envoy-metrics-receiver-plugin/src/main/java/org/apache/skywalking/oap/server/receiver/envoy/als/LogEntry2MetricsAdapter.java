@@ -103,10 +103,11 @@ public class LogEntry2MetricsAdapter {
         final Protocol protocol = requestProtocol(entry.getRequest());
         final String tlsMode = parseTLS(properties.getTlsProperties());
         final String internalErrorCode = parseInternalErrorCode(properties.getResponseFlags());
-        final long internalRequestLatencyNanos = properties.getTimeToFirstUpstreamTxByte().getNanos();
-        final long internalResponseLatencyNanos =
-            properties.getTimeToFirstDownstreamTxByte().getNanos()
-                - properties.getTimeToFirstUpstreamRxByte().getNanos();
+        // Duration.getNanos() is only the fractional second; total nanos need seconds too.
+        final long internalRequestLatencyNanos = formatAsNanos(properties.getTimeToFirstUpstreamTxByte());
+        final long internalResponseLatencyNanos = subtractNanos(
+            formatAsNanos(properties.getTimeToFirstDownstreamTxByte()),
+            formatAsNanos(properties.getTimeToFirstUpstreamRxByte()));
 
         final HTTPServiceMeshMetric.Builder builder =
             HTTPServiceMeshMetric
@@ -171,6 +172,48 @@ public class LogEntry2MetricsAdapter {
 
     public static long formatAsLong(final Duration duration) {
         return Instant.ofEpochSecond(duration.getSeconds(), duration.getNanos()).toEpochMilli();
+    }
+
+    /**
+     * Total nanoseconds of a protobuf {@link Duration}. Do not use {@link Duration#getNanos()} alone —
+     * that field is only the sub-second fraction ({@code 0..999_999_999}).
+     * <p>
+     * A duration that does not fit in a signed 64-bit nanosecond count is rejected. Callers must not
+     * substitute a truncated or wrapped value.
+     */
+    public static long formatAsNanos(final Duration duration) {
+        final long seconds = duration.getSeconds();
+        final int nanos = duration.getNanos();
+        try {
+            return java.time.Duration.ofSeconds(seconds, nanos).toNanos();
+        } catch (final ArithmeticException e) {
+            throw new UnrepresentableAlsDurationException(
+                "Envoy ALS duration does not fit in a long nanosecond value: seconds=" + seconds
+                    + ", nanos=" + nanos + "; refusing to record a truncated latency", e);
+        }
+    }
+
+    /**
+     * {@code endNanos - startNanos}. A difference that overflows {@code long} is rejected.
+     * A negative difference that fits is returned unchanged.
+     */
+    public static long subtractNanos(final long endNanos, final long startNanos) {
+        try {
+            return Math.subtractExact(endNanos, startNanos);
+        } catch (final ArithmeticException e) {
+            throw new UnrepresentableAlsDurationException(
+                "Envoy ALS latency difference does not fit in a long nanosecond value: " + endNanos
+                    + " - " + startNanos + "; refusing to record a wrapped latency", e);
+        }
+    }
+
+    /**
+     * A protobuf duration, or a difference of two durations, cannot be stored as a {@code long} nanosecond count.
+     */
+    public static final class UnrepresentableAlsDurationException extends IllegalArgumentException {
+        public UnrepresentableAlsDurationException(final String message, final Throwable cause) {
+            super(message, cause);
+        }
     }
 
     public static Protocol requestProtocol(final HTTPRequestProperties request) {
