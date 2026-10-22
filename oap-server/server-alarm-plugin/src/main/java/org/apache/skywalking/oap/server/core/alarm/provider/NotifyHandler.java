@@ -29,6 +29,7 @@ import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.skywalking.oap.server.core.CoreModule;
 import org.apache.skywalking.oap.server.core.alarm.AlarmCallback;
+import org.apache.skywalking.oap.server.core.alarm.AlarmHttpDeliveryMetrics;
 import org.apache.skywalking.oap.server.core.alarm.EndpointRelationMetaInAlarm;
 import org.apache.skywalking.oap.server.core.alarm.ServiceInstanceRelationMetaInAlarm;
 import org.apache.skywalking.oap.server.core.alarm.ServiceRelationMetaInAlarm;
@@ -62,15 +63,23 @@ public class NotifyHandler implements MetricsNotify {
     private final ModuleManager manager;
     private final HttpClient httpClient;
     private final Duration httpTimeout;
+    private final AlarmHttpDeliveryMetrics deliveryMetrics;
     private MetadataQueryService metadataQueryService;
 
     public NotifyHandler(final AlarmRulesWatcher alarmRulesWatcher, final ModuleManager manager,
                          final HttpClient httpClient, final Duration httpTimeout) {
+        this(alarmRulesWatcher, manager, httpClient, httpTimeout, AlarmHttpDeliveryMetrics.NOOP);
+    }
+
+    public NotifyHandler(final AlarmRulesWatcher alarmRulesWatcher, final ModuleManager manager,
+                         final HttpClient httpClient, final Duration httpTimeout,
+                         final AlarmHttpDeliveryMetrics deliveryMetrics) {
         this.alarmRulesWatcher = alarmRulesWatcher;
         core = new AlarmCore(alarmRulesWatcher);
         this.manager = manager;
         this.httpClient = httpClient;
         this.httpTimeout = httpTimeout;
+        this.deliveryMetrics = deliveryMetrics == null ? AlarmHttpDeliveryMetrics.NOOP : deliveryMetrics;
     }
 
     private MetadataQueryService metadata() {
@@ -246,15 +255,15 @@ public class NotifyHandler implements MetricsNotify {
 
     List<AlarmCallback> buildCallbacks(final AlarmCallback... callbacks) {
         final List<AlarmCallback> allCallbacks = new ArrayList<>(Arrays.asList(callbacks));
-        allCallbacks.add(new WebhookCallback(alarmRulesWatcher, httpClient, httpTimeout));
+        allCallbacks.add(new WebhookCallback(alarmRulesWatcher, httpClient, httpTimeout, deliveryMetrics));
         allCallbacks.add(new GRPCCallback(alarmRulesWatcher));
-        allCallbacks.add(new SlackhookCallback(alarmRulesWatcher, httpClient, httpTimeout));
-        allCallbacks.add(new WechatHookCallback(alarmRulesWatcher, httpClient, httpTimeout));
-        allCallbacks.add(new DingtalkHookCallback(alarmRulesWatcher, httpClient, httpTimeout));
-        allCallbacks.add(new FeishuHookCallback(alarmRulesWatcher, httpClient, httpTimeout));
-        allCallbacks.add(new WeLinkHookCallback(alarmRulesWatcher, httpClient, httpTimeout));
-        allCallbacks.add(new PagerDutyHookCallback(alarmRulesWatcher, httpClient, httpTimeout));
-        allCallbacks.add(new DiscordHookCallback(alarmRulesWatcher, httpClient, httpTimeout));
+        allCallbacks.add(new SlackhookCallback(alarmRulesWatcher, httpClient, httpTimeout, deliveryMetrics));
+        allCallbacks.add(new WechatHookCallback(alarmRulesWatcher, httpClient, httpTimeout, deliveryMetrics));
+        allCallbacks.add(new DingtalkHookCallback(alarmRulesWatcher, httpClient, httpTimeout, deliveryMetrics));
+        allCallbacks.add(new FeishuHookCallback(alarmRulesWatcher, httpClient, httpTimeout, deliveryMetrics));
+        allCallbacks.add(new WeLinkHookCallback(alarmRulesWatcher, httpClient, httpTimeout, deliveryMetrics));
+        allCallbacks.add(new PagerDutyHookCallback(alarmRulesWatcher, httpClient, httpTimeout, deliveryMetrics));
+        allCallbacks.add(new DiscordHookCallback(alarmRulesWatcher, httpClient, httpTimeout, deliveryMetrics));
         return allCallbacks;
     }
 }

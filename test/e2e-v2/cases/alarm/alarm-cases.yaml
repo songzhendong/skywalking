@@ -35,6 +35,16 @@
         sleep 30;
         curl  -XPOST http://${provider_host}:${provider_9090}/alarm/read
       expected: expected/silence-before-webhook.yml
+    # so11y: alarm HTTP delivery metrics on :1234 after webhook delivery
+    - query: |
+        m=$(curl -s http://${oap_host}:${oap_1234});
+        echo "$m" | grep -E 'alarm_http_delivery_total\{[^}]*hook_type="webhook"[^}]*result="success"' >/dev/null;
+        echo "$m" | grep -E 'alarm_http_delivery_status_total\{[^}]*hook_type="webhook"[^}]*status_class="2xx"' >/dev/null;
+        echo "$m" | grep -E 'alarm_http_delivery_latency_seconds_count\{[^}]*hook_type="webhook"' >/dev/null;
+        val=$(echo "$m" | grep -E 'alarm_http_delivery_total\{[^}]*hook_type="webhook"[^}]*result="success"' | awk '{print $2}' | head -1);
+        awk -v v="$val" 'BEGIN { if ((v+0) <= 0) exit 1 }';
+        echo alarm-http-delivery-so11y-ok
+      expected: expected/alarm-http-delivery-so11y.yml
     # after silence alarm list WARNING,receivers=lisi
     - query: |
         sleep 30;
