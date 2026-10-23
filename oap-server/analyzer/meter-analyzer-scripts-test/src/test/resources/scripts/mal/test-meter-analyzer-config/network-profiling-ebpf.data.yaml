@@ -43,7 +43,7 @@ input:
         server_process_id: proc-2
         protocol: http
         is_ssl: 'false'
-      value: 100.0
+      value: 500000.0
   rover_net_p_client_read_counts_counter:
     - labels:
         service: test-service
@@ -96,7 +96,7 @@ expected:
           client_process_id: proc-1
           server_process_id: proc-2
           component: '49'
-        value: 100.0
+        value: 500.0
   process_relation_client_read_cpm:
     entities:
       - scope: PROCESS_RELATION

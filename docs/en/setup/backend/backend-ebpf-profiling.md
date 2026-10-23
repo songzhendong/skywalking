@@ -146,15 +146,15 @@ In the TCP metrics, each metric includes both **client-side** and **server-side*
 |----|----|------|
 |Write CPM|Count|Number of write requests initiated per minute|
 |Write Total Bytes|B|Total data size written per minute|
-|Write Avg Execute Time|ns|Average execution time for each write operation|
-|Write RTT|ns|Round Trip Time (RTT)|
+|Write Avg Execute Time|us|Average execution time for each write operation|
+|Write RTT|us|Round Trip Time (RTT)|
 |Read CPM|Count|Number of read requests per minute|
 |Read Total Bytes|B|Total data size read per minute|
-|Read Avg Execute Time|ns|Average execution time for each read operation|
+|Read Avg Execute Time|us|Average execution time for each read operation|
 |Connect CPM|Count|Number of new connections established|
-|Connect Execute Time|ns|Time taken to establish a connection|
+|Connect Execute Time|us|Time taken to establish a connection|
 |Close CPM|Count|Number of closed connections|
-|Close Execute Time|ns|Time taken to close a connection|
+|Close Execute Time|us|Time taken to close a connection|
 |Retransmit CPM|Count|Number of data retransmissions per minute|
 |Drop CPM|Count|Number of dropped packets per minute|
 
@@ -168,8 +168,8 @@ If there is HTTP/1.x protocol communication between two nodes, the eBPF agent ca
 |Response Status CPM|Count|Number of occurrences of each response status code per minute|
 |Request Package Size|B|Average request package data size|
 |Response Package Size|B|Average response package data size|
-|Client Duration|ns|Time taken for the client to receive a response|
-|Server Duration|ns|Time taken for the server to send a response|
+|Client Duration|ms|Time taken for the client to receive a response|
+|Server Duration|ms|Time taken for the server to send a response|
 
 ##### HTTP Request
 

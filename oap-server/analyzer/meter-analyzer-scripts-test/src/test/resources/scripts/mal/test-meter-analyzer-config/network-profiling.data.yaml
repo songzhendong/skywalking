@@ -35,7 +35,7 @@ input:
       value: 100.0
   rover_net_p_client_write_exe_time_counter:
     - labels:
-      value: 100.0
+      value: 500000.0
   rover_net_p_client_read_counts_counter:
     - labels:
       value: 100.0
@@ -44,22 +44,22 @@ input:
       value: 100.0
   rover_net_p_client_read_exe_time_counter:
     - labels:
-      value: 100.0
+      value: 500000.0
   rover_net_p_client_write_rtt_exe_time_counter:
     - labels:
-      value: 100.0
+      value: 500.0
   rover_net_p_client_connect_counts_counter:
     - labels:
       value: 100.0
   rover_net_p_client_connect_exe_time_counter:
     - labels:
-      value: 100.0
+      value: 500000.0
   rover_net_p_client_close_counts_counter:
     - labels:
       value: 100.0
   rover_net_p_client_close_exe_time_counter:
     - labels:
-      value: 100.0
+      value: 500000.0
   rover_net_p_client_retransmit_counts_counter:
     - labels:
       value: 100.0
@@ -67,37 +67,37 @@ input:
     - labels:
       value: 100.0
   rover_net_p_client_write_rtt_histogram:
-    - labels: {le: '50'}
+    - labels: {le: '10'}
       value: 10.0
-    - labels: {le: '100'}
+    - labels: {le: '50'}
       value: 20.0
-    - labels: {le: '250'}
+    - labels: {le: '100'}
       value: 30.0
     - labels: {le: '500'}
       value: 40.0
     - labels: {le: '1000'}
       value: 50.0
   rover_net_p_client_write_exe_time_histogram:
-    - labels: {le: '50'}
+    - labels: {le: '10000'}
       value: 10.0
-    - labels: {le: '100'}
+    - labels: {le: '50000'}
       value: 20.0
-    - labels: {le: '250'}
+    - labels: {le: '100000'}
       value: 30.0
-    - labels: {le: '500'}
+    - labels: {le: '500000'}
       value: 40.0
-    - labels: {le: '1000'}
+    - labels: {le: '1000000'}
       value: 50.0
   rover_net_p_client_read_exe_time_histogram:
-    - labels: {le: '50'}
+    - labels: {le: '10000'}
       value: 10.0
-    - labels: {le: '100'}
+    - labels: {le: '50000'}
       value: 20.0
-    - labels: {le: '250'}
+    - labels: {le: '100000'}
       value: 30.0
-    - labels: {le: '500'}
+    - labels: {le: '500000'}
       value: 40.0
-    - labels: {le: '1000'}
+    - labels: {le: '1000000'}
       value: 50.0
   rover_net_p_server_write_counts_counter:
     - labels:
@@ -107,7 +107,7 @@ input:
       value: 100.0
   rover_net_p_server_write_exe_time_counter:
     - labels:
-      value: 100.0
+      value: 500000.0
   rover_net_p_server_read_counts_counter:
     - labels:
       value: 100.0
@@ -116,22 +116,22 @@ input:
       value: 100.0
   rover_net_p_server_read_exe_time_counter:
     - labels:
-      value: 100.0
+      value: 500000.0
   rover_net_p_server_write_rtt_exe_time_counter:
     - labels:
-      value: 100.0
+      value: 500.0
   rover_net_p_server_connect_counts_counter:
     - labels:
       value: 100.0
   rover_net_p_server_connect_exe_time_counter:
     - labels:
-      value: 100.0
+      value: 500000.0
   rover_net_p_server_close_counts_counter:
     - labels:
       value: 100.0
   rover_net_p_server_close_exe_time_counter:
     - labels:
-      value: 100.0
+      value: 500000.0
   rover_net_p_server_retransmit_counts_counter:
     - labels:
       value: 100.0
@@ -139,37 +139,37 @@ input:
     - labels:
       value: 100.0
   rover_net_p_server_write_rtt_histogram:
-    - labels: {le: '50'}
+    - labels: {le: '10'}
       value: 10.0
-    - labels: {le: '100'}
+    - labels: {le: '50'}
       value: 20.0
-    - labels: {le: '250'}
+    - labels: {le: '100'}
       value: 30.0
     - labels: {le: '500'}
       value: 40.0
     - labels: {le: '1000'}
       value: 50.0
   rover_net_p_server_write_exe_time_histogram:
-    - labels: {le: '50'}
+    - labels: {le: '10000'}
       value: 10.0
-    - labels: {le: '100'}
+    - labels: {le: '50000'}
       value: 20.0
-    - labels: {le: '250'}
+    - labels: {le: '100000'}
       value: 30.0
-    - labels: {le: '500'}
+    - labels: {le: '500000'}
       value: 40.0
-    - labels: {le: '1000'}
+    - labels: {le: '1000000'}
       value: 50.0
   rover_net_p_server_read_exe_time_histogram:
-    - labels: {le: '50'}
+    - labels: {le: '10000'}
       value: 10.0
-    - labels: {le: '100'}
+    - labels: {le: '50000'}
       value: 20.0
-    - labels: {le: '250'}
+    - labels: {le: '100000'}
       value: 30.0
-    - labels: {le: '500'}
+    - labels: {le: '500000'}
       value: 40.0
-    - labels: {le: '1000'}
+    - labels: {le: '1000000'}
       value: 50.0
   rover_net_p_http1_request_counter:
     - labels:
@@ -269,7 +269,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-        value: 100.0
+        value: 500.0
   process_relation_client_read_cpm:
     entities:
       - scope: PROCESS_RELATION
@@ -305,7 +305,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-        value: 100.0
+        value: 500.0
   process_relation_client_write_avg_rtt_time:
     entities:
       - scope: PROCESS_RELATION
@@ -317,7 +317,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-        value: 100.0
+        value: 500.0
   process_relation_client_connect_cpm:
     entities:
       - scope: PROCESS_RELATION
@@ -341,7 +341,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-        value: 100.0
+        value: 500.0
   process_relation_client_close_cpm:
     entities:
       - scope: PROCESS_RELATION
@@ -365,7 +365,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-        value: 100.0
+        value: 500.0
   process_relation_client_retransmit_cpm:
     entities:
       - scope: PROCESS_RELATION
@@ -401,8 +401,8 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '1000000'
-        value: 50.0
+          le: '10'
+        value: 10.0
       - labels:
           service: 
           instance: 
@@ -410,7 +410,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '100000'
+          le: '50'
         value: 20.0
       - labels:
           service: 
@@ -419,7 +419,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '250000'
+          le: '100'
         value: 30.0
       - labels:
           service: 
@@ -428,7 +428,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '500000'
+          le: '500'
         value: 40.0
       - labels:
           service: 
@@ -437,8 +437,8 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '50000'
-        value: 10.0
+          le: '1000'
+        value: 50.0
   process_relation_client_write_exe_time_percentile:
     entities:
       - scope: PROCESS_RELATION
@@ -450,8 +450,8 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '1000000'
-        value: 50.0
+          le: '10'
+        value: 10.0
       - labels:
           service: 
           instance: 
@@ -459,7 +459,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '100000'
+          le: '50'
         value: 20.0
       - labels:
           service: 
@@ -468,7 +468,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '250000'
+          le: '100'
         value: 30.0
       - labels:
           service: 
@@ -477,7 +477,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '500000'
+          le: '500'
         value: 40.0
       - labels:
           service: 
@@ -486,8 +486,8 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '50000'
-        value: 10.0
+          le: '1000'
+        value: 50.0
   process_relation_client_read_exe_time_percentile:
     entities:
       - scope: PROCESS_RELATION
@@ -499,8 +499,8 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '1000000'
-        value: 50.0
+          le: '10'
+        value: 10.0
       - labels:
           service: 
           instance: 
@@ -508,7 +508,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '100000'
+          le: '50'
         value: 20.0
       - labels:
           service: 
@@ -517,7 +517,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '250000'
+          le: '100'
         value: 30.0
       - labels:
           service: 
@@ -526,7 +526,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '500000'
+          le: '500'
         value: 40.0
       - labels:
           service: 
@@ -535,8 +535,8 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '50000'
-        value: 10.0
+          le: '1000'
+        value: 50.0
   process_relation_server_write_cpm:
     entities:
       - scope: PROCESS_RELATION
@@ -572,7 +572,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-        value: 100.0
+        value: 500.0
   process_relation_server_read_cpm:
     entities:
       - scope: PROCESS_RELATION
@@ -608,7 +608,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-        value: 100.0
+        value: 500.0
   process_relation_server_write_avg_rtt_time:
     entities:
       - scope: PROCESS_RELATION
@@ -620,7 +620,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-        value: 100.0
+        value: 500.0
   process_relation_server_connect_cpm:
     entities:
       - scope: PROCESS_RELATION
@@ -644,7 +644,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-        value: 100.0
+        value: 500.0
   process_relation_server_close_cpm:
     entities:
       - scope: PROCESS_RELATION
@@ -668,7 +668,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-        value: 100.0
+        value: 500.0
   process_relation_server_retransmit_cpm:
     entities:
       - scope: PROCESS_RELATION
@@ -704,8 +704,8 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '1000000'
-        value: 50.0
+          le: '10'
+        value: 10.0
       - labels:
           service: 
           instance: 
@@ -713,7 +713,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '100000'
+          le: '50'
         value: 20.0
       - labels:
           service: 
@@ -722,7 +722,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '250000'
+          le: '100'
         value: 30.0
       - labels:
           service: 
@@ -731,7 +731,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '500000'
+          le: '500'
         value: 40.0
       - labels:
           service: 
@@ -740,8 +740,8 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '50000'
-        value: 10.0
+          le: '1000'
+        value: 50.0
   process_relation_server_write_exe_time_percentile:
     entities:
       - scope: PROCESS_RELATION
@@ -753,8 +753,8 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '1000000'
-        value: 50.0
+          le: '10'
+        value: 10.0
       - labels:
           service: 
           instance: 
@@ -762,7 +762,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '100000'
+          le: '50'
         value: 20.0
       - labels:
           service: 
@@ -771,7 +771,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '250000'
+          le: '100'
         value: 30.0
       - labels:
           service: 
@@ -780,7 +780,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '500000'
+          le: '500'
         value: 40.0
       - labels:
           service: 
@@ -789,8 +789,8 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '50000'
-        value: 10.0
+          le: '1000'
+        value: 50.0
   process_relation_server_read_exe_time_percentile:
     entities:
       - scope: PROCESS_RELATION
@@ -802,8 +802,8 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '1000000'
-        value: 50.0
+          le: '10'
+        value: 10.0
       - labels:
           service: 
           instance: 
@@ -811,7 +811,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '100000'
+          le: '50'
         value: 20.0
       - labels:
           service: 
@@ -820,7 +820,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '250000'
+          le: '100'
         value: 30.0
       - labels:
           service: 
@@ -829,7 +829,7 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '500000'
+          le: '500'
         value: 40.0
       - labels:
           service: 
@@ -838,8 +838,8 @@ expected:
           client_process_id: mock-process-id
           server_process_id: mock-process-id
           component: '110'
-          le: '50000'
-        value: 10.0
+          le: '1000'
+        value: 50.0
   process_relation_http1_request_cpm:
     entities:
       - scope: PROCESS_RELATION

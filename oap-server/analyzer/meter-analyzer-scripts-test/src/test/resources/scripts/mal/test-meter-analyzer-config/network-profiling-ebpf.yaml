@@ -55,6 +55,6 @@ metricsRules:
   - name: client_write_total_bytes
     exp: rover_net_p_client_write_bytes_counter.sum(['service', 'instance', 'side', 'client_process_id', 'server_process_id', 'component']).downsampling(SUM_PER_MIN)
   - name: client_write_avg_exe_time
-    exp: rover_net_p_client_write_exe_time_counter.sum(['service', 'instance', 'side', 'client_process_id', 'server_process_id', 'component'])
+    exp: rover_net_p_client_write_exe_time_counter.sum(['service', 'instance', 'side', 'client_process_id', 'server_process_id', 'component']) / 1000
   - name: client_read_cpm
     exp: rover_net_p_client_read_counts_counter.sum(['service', 'instance', 'side', 'client_process_id', 'server_process_id', 'component']).downsampling(SUM_PER_MIN)
