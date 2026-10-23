@@ -20,6 +20,7 @@ package org.apache.skywalking.oap.server.core.alarm.provider.discord;
 
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.skywalking.oap.server.core.alarm.AlarmHttpDeliveryMetrics;
 import org.apache.skywalking.oap.server.core.alarm.AlarmMessage;
 import org.apache.skywalking.oap.server.core.alarm.HttpAlarmCallback;
 import org.apache.skywalking.oap.server.core.alarm.provider.AlarmRulesWatcher;
@@ -43,7 +44,12 @@ public class DiscordHookCallback extends HttpAlarmCallback {
 
     public DiscordHookCallback(final AlarmRulesWatcher alarmRulesWatcher, final HttpClient httpClient,
                                final Duration httpTimeout) {
-        super(httpClient, httpTimeout);
+        this(alarmRulesWatcher, httpClient, httpTimeout, AlarmHttpDeliveryMetrics.NOOP);
+    }
+
+    public DiscordHookCallback(final AlarmRulesWatcher alarmRulesWatcher, final HttpClient httpClient,
+                               final Duration httpTimeout, final AlarmHttpDeliveryMetrics deliveryMetrics) {
+        super(httpClient, httpTimeout, deliveryMetrics, "discord");
         this.alarmRulesWatcher = alarmRulesWatcher;
     }
 

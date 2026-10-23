@@ -33,6 +33,7 @@ import org.apache.skywalking.oap.server.core.query.enumeration.Scope;
 import org.apache.skywalking.oap.server.core.storage.annotation.Column;
 import org.apache.skywalking.oap.server.core.storage.annotation.ValueColumnMetadata;
 import org.apache.skywalking.oap.server.library.module.ModuleProvider;
+import org.apache.skywalking.oap.server.telemetry.TelemetryModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.apache.skywalking.oap.server.testing.util.ReflectUtil;
@@ -89,7 +90,8 @@ public class AlarmModuleProviderTest {
         String[] modules = moduleProvider.requiredModules();
         assertArrayEquals(new String[] {
             CoreModule.NAME,
-            ConfigurationModule.NAME
+            ConfigurationModule.NAME,
+            TelemetryModule.NAME
         }, modules);
     }
 

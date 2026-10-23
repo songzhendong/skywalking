@@ -37,8 +37,10 @@ services:
       SW_STORAGE: elasticsearch
       SW_SEARCHABLE_ALARM_TAG_KEYS: level,receivers
       SW_STORAGE_ES_LOGIC_SHARDING: "true"
+      SW_TELEMETRY: prometheus
     ports:
       - 12800
+      - 1234
     depends_on:
       es:
         condition: service_healthy
