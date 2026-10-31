@@ -96,18 +96,7 @@ public class AlarmCore {
                 if (!alarmMessageList.isEmpty()) {
                     List<AlarmMessage> alarmFiringMessageList = getAlarmFiringMessageList(alarmMessageList);
                     List<AlarmMessage> alarmRecoveryMessageList = getAlarmRecoveryMessageList(alarmMessageList);
-                    for (AlarmCallback callback : allCallbacks) {
-                        try {
-                            if (!alarmFiringMessageList.isEmpty()) {
-                                callback.doAlarm(alarmFiringMessageList);
-                            }
-                            if (!alarmRecoveryMessageList.isEmpty()) {
-                                callback.doAlarmRecovery(alarmRecoveryMessageList);
-                            }
-                        } catch (Exception e) {
-                            LOGGER.error(e.getMessage(), e);
-                        }
-                    }
+                    notifyCallbacks(allCallbacks, alarmFiringMessageList, alarmRecoveryMessageList);
                 }
             } catch (Exception e) {
                 LOGGER.error(e.getMessage(), e);
@@ -119,6 +108,31 @@ public class AlarmCore {
                 }
             }
         }, 10, 10, TimeUnit.SECONDS);
+    }
+
+    /**
+     * Best-effort fan-out: one callback failure must not skip later hooks. InterruptedException is handled
+     * explicitly so a restored interrupt flag cannot poison the rest of this round (or the next tick).
+     */
+    static void notifyCallbacks(final List<AlarmCallback> allCallbacks,
+                                final List<AlarmMessage> alarmFiringMessageList,
+                                final List<AlarmMessage> alarmRecoveryMessageList) {
+        for (AlarmCallback callback : allCallbacks) {
+            try {
+                if (!alarmFiringMessageList.isEmpty()) {
+                    callback.doAlarm(alarmFiringMessageList);
+                }
+                if (!alarmRecoveryMessageList.isEmpty()) {
+                    callback.doAlarmRecovery(alarmRecoveryMessageList);
+                }
+            } catch (InterruptedException e) {
+                // Clear so later hooks (and the next schedule tick) are not skipped by a sticky interrupt bit.
+                Thread.interrupted();
+                LOGGER.error(e.getMessage(), e);
+            } catch (Exception e) {
+                LOGGER.error(e.getMessage(), e);
+            }
+        }
     }
 
     public static List<AlarmMessage> getAlarmFiringMessageList(List<AlarmMessage> alarmMessageList) {

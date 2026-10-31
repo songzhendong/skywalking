@@ -21,6 +21,7 @@ package org.apache.skywalking.oap.server.core.alarm.provider.feishu;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.skywalking.oap.server.core.alarm.AlarmHttpDeliveryMetrics;
 import org.apache.skywalking.oap.server.core.alarm.AlarmMessage;
 import org.apache.skywalking.oap.server.core.alarm.HttpAlarmCallback;
 import org.apache.skywalking.oap.server.core.alarm.provider.AlarmRulesWatcher;
@@ -50,7 +51,12 @@ public class FeishuHookCallback extends HttpAlarmCallback {
 
     public FeishuHookCallback(final AlarmRulesWatcher alarmRulesWatcher, final HttpClient httpClient,
                               final Duration httpTimeout) {
-        super(httpClient, httpTimeout);
+        this(alarmRulesWatcher, httpClient, httpTimeout, AlarmHttpDeliveryMetrics.NOOP);
+    }
+
+    public FeishuHookCallback(final AlarmRulesWatcher alarmRulesWatcher, final HttpClient httpClient,
+                              final Duration httpTimeout, final AlarmHttpDeliveryMetrics deliveryMetrics) {
+        super(httpClient, httpTimeout, deliveryMetrics, "feishu");
         this.alarmRulesWatcher = alarmRulesWatcher;
     }
 

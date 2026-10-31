@@ -36,6 +36,7 @@ import java.net.URI;
 import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -43,8 +44,19 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.apache.skywalking.oap.server.telemetry.api.CounterMetrics;
+import org.apache.skywalking.oap.server.telemetry.api.GaugeMetrics;
+import org.apache.skywalking.oap.server.telemetry.api.HistogramMetrics;
+import org.apache.skywalking.oap.server.telemetry.api.MetricsCreator;
+import org.apache.skywalking.oap.server.telemetry.api.MetricsTag;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -79,6 +91,10 @@ public class HttpAlarmCallbackTest {
             super(HttpAlarmCallback.newHttpClient(timeout), timeout);
         }
 
+        Callback(final Duration timeout, final AlarmHttpDeliveryMetrics metrics, final String hookType) {
+            super(HttpAlarmCallback.newHttpClient(timeout), timeout, metrics, hookType);
+        }
+
         @Override
         protected void doAlarmCallback(List<AlarmMessage> alarmMessages, boolean isRecovery) {
         }
@@ -92,6 +108,86 @@ public class HttpAlarmCallbackTest {
 
         String send(final URI uri) throws IOException, InterruptedException {
             return post(uri, "{}", Map.of());
+        }
+
+        String sendWithoutDeliveryMetrics(int status) throws IOException, InterruptedException {
+            return postWithoutDeliveryMetrics(
+                URI.create("http://127.0.0.1:" + SERVER.getAddress().getPort() + "/status/" + status),
+                "{}", Map.of()
+            );
+        }
+    }
+
+    private static final class RecordingCreator implements MetricsCreator {
+        private final AtomicInteger deliveryIncrements = new AtomicInteger();
+        private final AtomicInteger statusIncrements = new AtomicInteger();
+        private final List<String> deliveryKeys = new CopyOnWriteArrayList<>();
+        private final List<String> statusKeys = new CopyOnWriteArrayList<>();
+        private final List<Double> latencies = new ArrayList<>();
+
+        @Override
+        public CounterMetrics createCounter(String name, String tips, MetricsTag.Keys tagKeys,
+                                            MetricsTag.Values tagValues) {
+            final String joined = String.join(",", tagValues.getValues());
+            return new CounterMetrics() {
+                @Override
+                public void inc() {
+                    if ("alarm_http_delivery_total".equals(name)) {
+                        deliveryIncrements.incrementAndGet();
+                        deliveryKeys.add(joined);
+                    } else if ("alarm_http_delivery_status_total".equals(name)) {
+                        statusIncrements.incrementAndGet();
+                        statusKeys.add(joined);
+                    }
+                }
+
+                @Override
+                public void inc(double value) {
+                    inc();
+                }
+            };
+        }
+
+        @Override
+        public GaugeMetrics createGauge(String name, String tips, MetricsTag.Keys tagKeys,
+                                        MetricsTag.Values tagValues) {
+            return new GaugeMetrics() {
+                @Override
+                public void inc() {
+                }
+
+                @Override
+                public void inc(double value) {
+                }
+
+                @Override
+                public void dec() {
+                }
+
+                @Override
+                public void dec(double value) {
+                }
+
+                @Override
+                public void setValue(double value) {
+                }
+
+                @Override
+                public double getValue() {
+                    return 0;
+                }
+            };
+        }
+
+        @Override
+        public HistogramMetrics createHistogramMetric(String name, String tips, MetricsTag.Keys tagKeys,
+                                                      MetricsTag.Values tagValues, double... buckets) {
+            return new HistogramMetrics() {
+                @Override
+                public void observe(double value) {
+                    latencies.add(value);
+                }
+            };
         }
     }
 
@@ -151,6 +247,150 @@ public class HttpAlarmCallbackTest {
         assertEquals(1, APPENDER.events.size());
         assertEquals(Level.ERROR, APPENDER.events.get(0).getLevel());
         assertTrue(APPENDER.events.get(0).getMessage().getFormattedMessage().contains("500"));
+    }
+
+    @Test
+    public void successAndHttpErrorAreRecorded() throws Exception {
+        final RecordingCreator creator = new RecordingCreator();
+        final AlarmHttpDeliveryMetrics metrics = new AlarmHttpDeliveryMetrics(creator);
+        final Callback callback = new Callback(Duration.ofSeconds(12), metrics, "webhook");
+
+        callback.send(202);
+        callback.send(500);
+
+        assertEquals(2, creator.deliveryIncrements.get());
+        assertEquals(2, creator.statusIncrements.get());
+        assertEquals(2, creator.latencies.size());
+        assertTrue(creator.deliveryKeys.stream().anyMatch(k -> k.contains("success")));
+        assertTrue(creator.deliveryKeys.stream().anyMatch(k -> k.contains("http_error")));
+        assertTrue(creator.statusKeys.stream().anyMatch(k -> k.contains("2xx")));
+        assertTrue(creator.statusKeys.stream().anyMatch(k -> k.contains("5xx")));
+    }
+
+    @Test
+    public void postWithoutDeliveryMetricsDoesNotRecord() throws Exception {
+        final RecordingCreator creator = new RecordingCreator();
+        final AlarmHttpDeliveryMetrics metrics = new AlarmHttpDeliveryMetrics(creator);
+        final Callback callback = new Callback(Duration.ofSeconds(12), metrics, "welink");
+
+        callback.sendWithoutDeliveryMetrics(200);
+        callback.send(200);
+
+        assertEquals(1, creator.deliveryIncrements.get());
+        assertEquals(1, creator.statusIncrements.get());
+        assertEquals(1, creator.latencies.size());
+        assertTrue(creator.deliveryKeys.stream().anyMatch(k -> k.contains("welink") && k.contains("success")));
+    }
+
+    @Test
+    public void eachPostIncrementsDeliveryCounterOnce() throws Exception {
+        final RecordingCreator creator = new RecordingCreator();
+        final AlarmHttpDeliveryMetrics metrics = new AlarmHttpDeliveryMetrics(creator);
+        final Callback callback = new Callback(Duration.ofSeconds(12), metrics, "webhook");
+
+        for (int i = 0; i < 3; i++) {
+            callback.send(200);
+        }
+        callback.send(500);
+
+        assertEquals(4, creator.deliveryIncrements.get());
+        assertEquals(3, creator.deliveryKeys.stream().filter(k -> k.contains("success")).count());
+        assertEquals(1, creator.deliveryKeys.stream().filter(k -> k.contains("http_error")).count());
+        assertEquals(4, creator.statusIncrements.get());
+        assertEquals(4, creator.latencies.size());
+    }
+
+    @Test
+    public void interruptedDeliveryIsRecordedWithoutStatusClass() throws Exception {
+        final CountDownLatch release = new CountDownLatch(1);
+        final CountDownLatch entered = new CountDownLatch(1);
+        final ExecutorService executor = Executors.newSingleThreadExecutor();
+        final HttpServer stalling = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        stalling.setExecutor(executor);
+        stalling.createContext("/stall-interrupt", exchange -> {
+            entered.countDown();
+            exchange.sendResponseHeaders(200, 64);
+            exchange.getResponseBody().write("ping".getBytes(StandardCharsets.UTF_8));
+            exchange.getResponseBody().flush();
+            try {
+                release.await(30, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            exchange.close();
+        });
+        stalling.start();
+        try {
+            final RecordingCreator creator = new RecordingCreator();
+            final AlarmHttpDeliveryMetrics metrics = new AlarmHttpDeliveryMetrics(creator);
+            final Callback callback = new Callback(Duration.ofSeconds(30), metrics, "webhook");
+            final URI uri = URI.create(
+                "http://127.0.0.1:" + stalling.getAddress().getPort() + "/stall-interrupt");
+            final AtomicReference<Throwable> failure = new AtomicReference<>();
+            final AtomicBoolean interruptFlagSticky = new AtomicBoolean(true);
+            final Thread caller = new Thread(() -> {
+                try {
+                    callback.send(uri);
+                } catch (InterruptedException e) {
+                    // Must stay clear: AlarmCore catches Exception/InterruptedException and continues other hooks.
+                    interruptFlagSticky.set(Thread.currentThread().isInterrupted());
+                    failure.set(e);
+                } catch (Throwable thrown) {
+                    failure.set(thrown);
+                } finally {
+                    Thread.interrupted();
+                }
+            });
+            caller.start();
+            assertTrue(entered.await(5, TimeUnit.SECONDS));
+            caller.interrupt();
+            caller.join(5_000);
+            assertInstanceOf(InterruptedException.class, failure.get());
+            assertFalse(interruptFlagSticky.get());
+            assertEquals(1, creator.deliveryIncrements.get());
+            assertEquals(0, creator.statusIncrements.get());
+            assertTrue(creator.deliveryKeys.stream().anyMatch(k -> k.contains("interrupted")));
+            assertEquals(1, creator.latencies.size());
+        } finally {
+            release.countDown();
+            stalling.stop(0);
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    public void timeoutIsRecordedWithoutStatusClass() throws Exception {
+        final CountDownLatch release = new CountDownLatch(1);
+        final ExecutorService executor = Executors.newSingleThreadExecutor();
+        final HttpServer stalling = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        stalling.setExecutor(executor);
+        stalling.createContext("/stall-metrics", exchange -> {
+            exchange.sendResponseHeaders(200, 64);
+            exchange.getResponseBody().write("ping".getBytes(StandardCharsets.UTF_8));
+            exchange.getResponseBody().flush();
+            try {
+                release.await(10, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            exchange.close();
+        });
+        stalling.start();
+        try {
+            final RecordingCreator creator = new RecordingCreator();
+            final AlarmHttpDeliveryMetrics metrics = new AlarmHttpDeliveryMetrics(creator);
+            final Callback callback = new Callback(Duration.ofSeconds(1), metrics, "slack");
+            final URI uri = URI.create("http://127.0.0.1:" + stalling.getAddress().getPort() + "/stall-metrics");
+            assertThrows(HttpTimeoutException.class, () -> callback.send(uri));
+            assertEquals(1, creator.deliveryIncrements.get());
+            assertEquals(0, creator.statusIncrements.get());
+            assertTrue(creator.deliveryKeys.stream().anyMatch(k -> k.contains("timeout")));
+            assertEquals(1, creator.latencies.size());
+        } finally {
+            release.countDown();
+            stalling.stop(0);
+            executor.shutdownNow();
+        }
     }
 
     @Test

@@ -22,6 +22,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.skywalking.oap.server.core.alarm.AlarmHttpDeliveryMetrics;
 import org.apache.skywalking.oap.server.core.alarm.AlarmMessage;
 import org.apache.skywalking.oap.server.core.alarm.HttpAlarmCallback;
 import org.apache.skywalking.oap.server.core.alarm.provider.AlarmRulesWatcher;
@@ -44,7 +45,12 @@ public class PagerDutyHookCallback extends HttpAlarmCallback {
 
     public PagerDutyHookCallback(final AlarmRulesWatcher alarmRulesWatcher, final HttpClient httpClient,
                                  final Duration httpTimeout) {
-        super(httpClient, httpTimeout);
+        this(alarmRulesWatcher, httpClient, httpTimeout, AlarmHttpDeliveryMetrics.NOOP);
+    }
+
+    public PagerDutyHookCallback(final AlarmRulesWatcher alarmRulesWatcher, final HttpClient httpClient,
+                                 final Duration httpTimeout, final AlarmHttpDeliveryMetrics deliveryMetrics) {
+        super(httpClient, httpTimeout, deliveryMetrics, "pagerduty");
         this.alarmRulesWatcher = alarmRulesWatcher;
     }
 
