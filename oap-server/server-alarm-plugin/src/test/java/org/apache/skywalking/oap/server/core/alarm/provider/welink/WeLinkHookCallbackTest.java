@@ -26,11 +26,17 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+import org.apache.skywalking.oap.server.core.alarm.AlarmHttpDeliveryMetrics;
 import org.apache.skywalking.oap.server.core.alarm.AlarmMessage;
 import org.apache.skywalking.oap.server.core.alarm.provider.AlarmHooksType;
 import org.apache.skywalking.oap.server.core.alarm.provider.AlarmRulesWatcher;
 import org.apache.skywalking.oap.server.core.alarm.provider.Rules;
 import org.apache.skywalking.oap.server.core.source.DefaultScopeDefine;
+import org.apache.skywalking.oap.server.telemetry.api.CounterMetrics;
+import org.apache.skywalking.oap.server.telemetry.api.GaugeMetrics;
+import org.apache.skywalking.oap.server.telemetry.api.HistogramMetrics;
+import org.apache.skywalking.oap.server.telemetry.api.MetricsCreator;
+import org.apache.skywalking.oap.server.telemetry.api.MetricsTag;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -92,7 +98,70 @@ public class WeLinkHookCallbackTest {
         rules.getWeLinkSettingsMap().put(setting2.getFormattedName(), setting2);
 
         AlarmRulesWatcher alarmRulesWatcher = new AlarmRulesWatcher(rules, null, null);
-        WeLinkHookCallback welinkHookCallback = new WeLinkHookCallback(alarmRulesWatcher, HttpClient.newHttpClient(), Duration.ofSeconds(12));
+        final AtomicInteger deliveryIncrements = new AtomicInteger();
+        final MetricsCreator metricsCreator = new MetricsCreator() {
+            @Override
+            public CounterMetrics createCounter(String name, String tips, MetricsTag.Keys tagKeys,
+                                                MetricsTag.Values tagValues) {
+                return new CounterMetrics() {
+                    @Override
+                    public void inc() {
+                        if ("alarm_http_delivery_total".equals(name)) {
+                            deliveryIncrements.incrementAndGet();
+                        }
+                    }
+
+                    @Override
+                    public void inc(double value) {
+                        inc();
+                    }
+                };
+            }
+
+            @Override
+            public GaugeMetrics createGauge(String name, String tips, MetricsTag.Keys tagKeys,
+                                            MetricsTag.Values tagValues) {
+                return new GaugeMetrics() {
+                    @Override
+                    public void inc() {
+                    }
+
+                    @Override
+                    public void inc(double value) {
+                    }
+
+                    @Override
+                    public void dec() {
+                    }
+
+                    @Override
+                    public void dec(double value) {
+                    }
+
+                    @Override
+                    public void setValue(double value) {
+                    }
+
+                    @Override
+                    public double getValue() {
+                        return 0;
+                    }
+                };
+            }
+
+            @Override
+            public HistogramMetrics createHistogramMetric(String name, String tips, MetricsTag.Keys tagKeys,
+                                                          MetricsTag.Values tagValues, double... buckets) {
+                return new HistogramMetrics() {
+                    @Override
+                    public void observe(double value) {
+                    }
+                };
+            }
+        };
+        WeLinkHookCallback welinkHookCallback = new WeLinkHookCallback(
+            alarmRulesWatcher, HttpClient.newHttpClient(), Duration.ofSeconds(12),
+            new AlarmHttpDeliveryMetrics(metricsCreator));
         List<AlarmMessage> alarmMessages = new ArrayList<>(2);
         AlarmMessage alarmMessage = new AlarmMessage();
         alarmMessage.setScopeId(DefaultScopeDefine.SERVICE);
@@ -108,5 +177,7 @@ public class WeLinkHookCallbackTest {
         alarmMessages.add(anotherAlarmMessage);
         welinkHookCallback.doAlarm(alarmMessages);
         Assertions.assertTrue(IS_SUCCESS.get());
+        // 2 token fetches + 2 message posts hit the mock server (COUNT==4), but only message posts are so11y.
+        Assertions.assertEquals(2, deliveryIncrements.get());
     }
 }

@@ -26,6 +26,7 @@ import com.google.gson.JsonObject;
 import java.util.Map;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.skywalking.oap.server.core.alarm.AlarmHttpDeliveryMetrics;
 import org.apache.skywalking.oap.server.core.alarm.AlarmMessage;
 import org.apache.skywalking.oap.server.core.alarm.HttpAlarmCallback;
 import org.apache.skywalking.oap.server.core.alarm.provider.AlarmRulesWatcher;
@@ -53,7 +54,12 @@ public class WeLinkHookCallback extends HttpAlarmCallback {
 
     public WeLinkHookCallback(final AlarmRulesWatcher alarmRulesWatcher, final HttpClient httpClient,
                               final Duration httpTimeout) {
-        super(httpClient, httpTimeout);
+        this(alarmRulesWatcher, httpClient, httpTimeout, AlarmHttpDeliveryMetrics.NOOP);
+    }
+
+    public WeLinkHookCallback(final AlarmRulesWatcher alarmRulesWatcher, final HttpClient httpClient,
+                              final Duration httpTimeout, final AlarmHttpDeliveryMetrics deliveryMetrics) {
+        super(httpClient, httpTimeout, deliveryMetrics, "welink");
         this.alarmRulesWatcher = alarmRulesWatcher;
     }
 
@@ -124,7 +130,8 @@ public class WeLinkHookCallback extends HttpAlarmCallback {
         final var accessTokenUrl = webHookUrl.getAccessTokenUrl();
         final var clientId = webHookUrl.getClientId();
         final var clientSecret = webHookUrl.getClientSecret();
-        final var response = post(
+        // Token fetch is not an alarm delivery; do not inflate alarm_http_* so11y.
+        final var response = postWithoutDeliveryMetrics(
                 URI.create(accessTokenUrl),
                 String.format(Locale.US, "{\"client_id\":%s,\"client_secret\":%s}", clientId, clientSecret),
                 Collections.emptyMap()

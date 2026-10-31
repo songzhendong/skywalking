@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
+import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -34,14 +35,31 @@ public abstract class HttpAlarmCallback implements AlarmCallback {
 
     private final Duration timeout;
 
+    private final AlarmHttpDeliveryMetrics deliveryMetrics;
+
+    private final String hookType;
+
     /**
      * @param httpClient shared by every HTTP hook, see {@link #newHttpClient(Duration)}.
      * @param timeout    deadline of each {@link #post(URI, String, Map)}, covering connect, the response headers and
      *                   the response body.
      */
     protected HttpAlarmCallback(final HttpClient httpClient, final Duration timeout) {
+        this(httpClient, timeout, AlarmHttpDeliveryMetrics.NOOP, "unknown");
+    }
+
+    /**
+     * @param deliveryMetrics use {@link AlarmHttpDeliveryMetrics#NOOP} when unavailable
+     * @param hookType        fixed id such as {@code webhook}; never a URL
+     */
+    protected HttpAlarmCallback(final HttpClient httpClient,
+                                final Duration timeout,
+                                final AlarmHttpDeliveryMetrics deliveryMetrics,
+                                final String hookType) {
         this.httpClient = httpClient;
         this.timeout = timeout;
+        this.deliveryMetrics = deliveryMetrics == null ? AlarmHttpDeliveryMetrics.NOOP : deliveryMetrics;
+        this.hookType = hookType == null || hookType.isEmpty() ? "unknown" : hookType;
     }
 
     public static HttpClient newHttpClient(final Duration connectTimeout) {
@@ -57,6 +75,27 @@ public abstract class HttpAlarmCallback implements AlarmCallback {
             final String body,
             final Map<String, String> headers)
             throws IOException, InterruptedException {
+        return post(uri, body, headers, true);
+    }
+
+    /**
+     * Same as {@link #post(URI, String, Map)} but skips delivery so11y. Use for auxiliary calls such as OAuth token
+     * fetch that must not inflate {@code alarm_http_*} series.
+     */
+    protected String postWithoutDeliveryMetrics(
+            final URI uri,
+            final String body,
+            final Map<String, String> headers)
+            throws IOException, InterruptedException {
+        return post(uri, body, headers, false);
+    }
+
+    private String post(
+            final URI uri,
+            final String body,
+            final Map<String, String> headers,
+            final boolean recordDelivery)
+            throws IOException, InterruptedException {
         final var request = HttpRequest
                 .newBuilder()
                 .uri(uri)
@@ -67,19 +106,54 @@ public abstract class HttpAlarmCallback implements AlarmCallback {
                 .timeout(timeout);
         headers.forEach(request::header);
 
-        final var response = JdkHttpClientUtils.sendStringWithTimeout(httpClient, request.build(), timeout);
-
-        final var status = response.statusCode();
-        // Any 2xx means the hook endpoint accepted the alarm. Asynchronous intake APIs answer with 202 rather
-        // than 200 (PagerDuty's Events API v2 among them), which previously logged every delivery as a failure.
-        if (status < 200 || status >= 300) {
-            final var logger = LoggerFactory.getLogger(getClass());
-            logger.error(
-                    "send to {} failure. Response code: {}, Response content: {}",
-                    uri, status, response.body()
-            );
+        final long started = System.nanoTime();
+        try {
+            final var response = JdkHttpClientUtils.sendStringWithTimeout(httpClient, request.build(), timeout);
+            final var status = response.statusCode();
+            final var statusClass = AlarmHttpDeliveryMetrics.statusClassOf(status);
+            // Any 2xx means the hook endpoint accepted the alarm. Asynchronous intake APIs answer with 202 rather
+            // than 200 (PagerDuty's Events API v2 among them), which previously logged every delivery as a failure.
+            if (status < 200 || status >= 300) {
+                final var logger = LoggerFactory.getLogger(getClass());
+                logger.error(
+                        "send to {} failure. Response code: {}, Response content: {}",
+                        uri, status, response.body()
+                );
+                if (recordDelivery) {
+                    record(AlarmHttpDeliveryMetrics.RESULT_HTTP_ERROR, statusClass, started);
+                }
+            } else if (recordDelivery) {
+                record(AlarmHttpDeliveryMetrics.RESULT_SUCCESS, statusClass, started);
+            }
+            return response.body();
+        } catch (HttpTimeoutException e) {
+            // Must precede IOException: HttpTimeoutException extends IOException.
+            if (recordDelivery) {
+                record(AlarmHttpDeliveryMetrics.RESULT_TIMEOUT, null, started);
+            }
+            throw e;
+        } catch (IOException e) {
+            if (recordDelivery) {
+                record(AlarmHttpDeliveryMetrics.RESULT_IO_ERROR, null, started);
+            }
+            throw e;
+        } catch (InterruptedException e) {
+            // Rethrow without restoring the interrupt flag. AlarmCore (and some hooks) catch Exception and
+            // keep notifying later endpoints; restoring here would make those later HTTP calls fail immediately.
+            if (recordDelivery) {
+                record(AlarmHttpDeliveryMetrics.RESULT_INTERRUPTED, null, started);
+            }
+            throw e;
         }
-        return response.body();
+    }
+
+    private void record(final String result, final String statusClass, final long startedNanos) {
+        deliveryMetrics.record(
+            hookType,
+            result,
+            statusClass,
+            (System.nanoTime() - startedNanos) / 1.0E9D
+        );
     }
 
     /**

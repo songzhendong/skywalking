@@ -18,6 +18,8 @@
 
 package org.apache.skywalking.oap.server.core.alarm.provider;
 
+import org.apache.skywalking.oap.server.core.alarm.AlarmCallback;
+import org.apache.skywalking.oap.server.core.alarm.AlarmMessage;
 import org.joda.time.LocalDateTime;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -28,7 +30,11 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 
@@ -82,6 +88,41 @@ public class AlarmCoreTest {
                 Assertions.assertTrue(false);
             }
         }
+    }
+
+    @Test
+    public void interruptOnOneCallbackDoesNotSkipLaterCallbacks() throws Exception {
+        final AtomicInteger secondInvocations = new AtomicInteger();
+        final AtomicBoolean interruptStickyAfterFirst = new AtomicBoolean();
+        final AlarmCallback first = new AlarmCallback() {
+            @Override
+            public void doAlarm(List<AlarmMessage> alarmMessage) throws Exception {
+                Thread.currentThread().interrupt();
+                throw new InterruptedException("simulated hook interrupt");
+            }
+
+            @Override
+            public void doAlarmRecovery(List<AlarmMessage> alarmMessage) {
+            }
+        };
+        final AlarmCallback second = new AlarmCallback() {
+            @Override
+            public void doAlarm(List<AlarmMessage> alarmMessage) throws Exception {
+                interruptStickyAfterFirst.set(Thread.currentThread().isInterrupted());
+                secondInvocations.incrementAndGet();
+            }
+
+            @Override
+            public void doAlarmRecovery(List<AlarmMessage> alarmMessage) {
+            }
+        };
+
+        final List<AlarmMessage> firing = List.of(new AlarmMessage());
+        AlarmCore.notifyCallbacks(List.of(first, second), firing, List.of());
+
+        assertEquals(1, secondInvocations.get());
+        assertFalse(interruptStickyAfterFirst.get());
+        assertFalse(Thread.currentThread().isInterrupted());
     }
 
     private boolean checkTimePoints(List<LocalDateTime> checkTime) {

@@ -20,6 +20,7 @@ package org.apache.skywalking.oap.server.core.alarm.provider.webhook;
 
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.skywalking.oap.server.core.alarm.AlarmHttpDeliveryMetrics;
 import org.apache.skywalking.oap.server.core.alarm.AlarmMessage;
 import org.apache.skywalking.oap.server.core.alarm.HttpAlarmCallback;
 
@@ -42,7 +43,12 @@ public class WebhookCallback extends HttpAlarmCallback {
 
     public WebhookCallback(final AlarmRulesWatcher alarmRulesWatcher, final HttpClient httpClient,
                            final Duration httpTimeout) {
-        super(httpClient, httpTimeout);
+        this(alarmRulesWatcher, httpClient, httpTimeout, AlarmHttpDeliveryMetrics.NOOP);
+    }
+
+    public WebhookCallback(final AlarmRulesWatcher alarmRulesWatcher, final HttpClient httpClient,
+                           final Duration httpTimeout, final AlarmHttpDeliveryMetrics deliveryMetrics) {
+        super(httpClient, httpTimeout, deliveryMetrics, "webhook");
         this.alarmRulesWatcher = alarmRulesWatcher;
     }
 
