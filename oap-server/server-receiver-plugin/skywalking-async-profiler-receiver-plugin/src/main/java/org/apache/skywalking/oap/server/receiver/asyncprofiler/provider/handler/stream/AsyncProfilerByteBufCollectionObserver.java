@@ -68,6 +68,18 @@ public class AsyncProfilerByteBufCollectionObserver implements StreamObserver<As
     public void onNext(AsyncProfilerData asyncProfilerData) {
         if (Objects.isNull(taskMetaData) && asyncProfilerData.hasMetaData()) {
             taskMetaData = parseMetaData(asyncProfilerData.getMetaData(), taskDAO);
+            AsyncProfilerTask task = taskMetaData.getTask();
+            // taskDAO.getById may return null (TTL, lag, wrong id). Never ACK an upload or
+            // write task logs without a real task — that NPEs, or ACKs then drops with no FINISHED.
+            if (task == null) {
+                log.error(
+                    "AsyncProfiler instanceId:{} uploaded meta for unknown taskId, reject collection",
+                    taskMetaData.getInstanceId());
+                responseObserver.onNext(AsyncProfilerCollectionResponse.newBuilder()
+                        .setType(AsyncProfilingStatus.EXECUTION_TASK_ERROR)
+                        .build());
+                return;
+            }
             if (AsyncProfilingStatus.PROFILING_SUCCESS.equals(taskMetaData.getType())) {
                 int size = taskMetaData.getContentSize();
                 if (jfrMaxSize >= size) {
@@ -77,14 +89,14 @@ public class AsyncProfilerByteBufCollectionObserver implements StreamObserver<As
                 } else {
                     responseObserver.onNext(AsyncProfilerCollectionResponse.newBuilder().setType(AsyncProfilingStatus.TERMINATED_BY_OVERSIZE).build());
                     // The size of the uploaded jfr file exceeds the acceptable range of the oap server
-                    recordAsyncProfilerTaskLog(taskMetaData.getTask(), taskMetaData.getInstanceId(),
+                    recordAsyncProfilerTaskLog(task, taskMetaData.getInstanceId(),
                             AsyncProfilerTaskLogOperationType.JFR_UPLOAD_FILE_TOO_LARGE_ERROR);
                 }
             } else {
-                recordAsyncProfilerTaskLog(taskMetaData.getTask(), taskMetaData.getInstanceId(),
+                recordAsyncProfilerTaskLog(task, taskMetaData.getInstanceId(),
                         AsyncProfilerTaskLogOperationType.EXECUTION_TASK_ERROR);
             }
-        } else if (asyncProfilerData.hasContent()) {
+        } else if (asyncProfilerData.hasContent() && buf != null) {
             asyncProfilerData.getContent().copyTo(buf);
         }
     }
