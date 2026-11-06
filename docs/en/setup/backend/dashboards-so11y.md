@@ -49,6 +49,9 @@ Self observability monitoring provides monitoring of the status and resources of
 | Count per minute | meter_oap_instance_alarm_http_delivery_count | HTTP alarm hook deliveries by `hook_type` and `result` (Per Minute) | oap self observability |
 | Count per minute | meter_oap_instance_alarm_http_delivery_status_count | HTTP alarm hook responses by `hook_type` and `status_class` (Per Minute) | oap self observability |
 | ms | meter_oap_instance_alarm_http_delivery_latency_percentile | HTTP alarm hook delivery latency by `hook_type` (ms) | oap self observability |
+| Count per minute | meter_oap_instance_alarm_grpc_delivery_count | gRPC alarm hook deliveries by `message_kind` and `result` (Per Minute) | oap self observability |
+| Count per minute | meter_oap_instance_alarm_grpc_delivery_messages_count | gRPC alarm hook messages by `message_kind` and `result` (Per Minute) | oap self observability |
+| ms | meter_oap_instance_alarm_grpc_delivery_latency_percentile | gRPC alarm hook delivery latency by `message_kind` (ms) | oap self observability |
 
 ## Customizations
 You can customize your own metrics/expression/dashboard panel.

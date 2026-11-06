@@ -57,3 +57,13 @@
       expected: expected/metrics-has-value-label-alarm-delivery-status.yml
     - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression="meter_oap_instance_alarm_http_delivery_latency_percentile{p='50,99'}" --instance-name=http://localhost:1234 --service-name=oap-server
       expected: expected/metrics-has-value-percentile-alarm-delivery.yml
+
+    # alarm gRPC hook delivery, fed by AlarmGrpcHookServer on provider:9898.
+    - query: |
+        sleep 60;
+        swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression="meter_oap_instance_alarm_grpc_delivery_count{message_kind='alarm',result='success'}" --instance-name=http://localhost:1234 --service-name=oap-server
+      expected: expected/metrics-has-value-label-alarm-grpc-delivery.yml
+    - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression="meter_oap_instance_alarm_grpc_delivery_messages_count{message_kind='alarm',result='success'}" --instance-name=http://localhost:1234 --service-name=oap-server
+      expected: expected/metrics-has-value-label-alarm-grpc-delivery-messages.yml
+    - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression="meter_oap_instance_alarm_grpc_delivery_latency_percentile{p='50,99'}" --instance-name=http://localhost:1234 --service-name=oap-server
+      expected: expected/metrics-has-value-percentile-alarm-grpc-delivery.yml
