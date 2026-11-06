@@ -29,6 +29,7 @@ import org.apache.skywalking.oap.server.library.module.ModuleConfig;
 @Setter
 public class AlarmModuleConfig extends ModuleConfig {
     public static final long DEFAULT_HTTP_TIMEOUT_SECONDS = 12;
+    public static final long DEFAULT_GRPC_TIMEOUT_SECONDS = 10;
 
     /**
      * Deadline (seconds) of each HTTP request an HTTP-based hook makes, covering connect, waiting for the
@@ -36,4 +37,11 @@ public class AlarmModuleConfig extends ModuleConfig {
      * {@link #DEFAULT_HTTP_TIMEOUT_SECONDS}. The gRPC hook does not use it.
      */
     private long httpTimeout = DEFAULT_HTTP_TIMEOUT_SECONDS;
+
+    /**
+     * Deadline (seconds) of each gRPC alarm / recovery stream a gRPC hook opens, covering connecting and
+     * waiting for the peer to complete the stream. Values {@code <= 0} fall back to
+     * {@link #DEFAULT_GRPC_TIMEOUT_SECONDS}. HTTP-based hooks do not use it.
+     */
+    private long grpcTimeout = DEFAULT_GRPC_TIMEOUT_SECONDS;
 }

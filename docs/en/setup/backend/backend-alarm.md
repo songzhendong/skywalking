@@ -525,6 +525,19 @@ alarm:
 
 The default is `12` seconds. Values `<= 0` fall back to `12`.
 
+### gRPC delivery timeout
+The gRPC hook bounds each alarm or recovery stream by one deadline, covering connecting and waiting for the peer to
+complete the stream. It does not use `httpTimeout`.
+
+```yaml
+alarm:
+  default:
+    grpcTimeout: ${SW_ALARM_GRPC_TIMEOUT:10} # seconds
+```
+
+The default is `10` seconds. Values `<= 0` fall back to `10`. Like `httpTimeout`, this is set in
+`config/application.yml`, not in `alarm-settings.yml`, so it does not change dynamically.
+
 ### HTTP delivery so11y metrics
 When the OAP [telemetry](backend-telemetry.md) selector is `prometheus` (process-local scrape, default port `:1234`),
 each finished HTTP hook delivery records three metric families:
@@ -563,6 +576,33 @@ for rejected credentials, and the messages of that URL are not sent.
 The [OAP self observability dashboard](dashboards-so11y.md) charts these metrics as
 `meter_oap_instance_alarm_http_delivery_count`, `meter_oap_instance_alarm_http_delivery_status_count` and
 `meter_oap_instance_alarm_http_delivery_latency_percentile`, and the OAP
+[Grafana dashboards](backend-telemetry.md#grafana-visualization) chart the raw series.
+
+### gRPC delivery so11y metrics
+When the OAP [telemetry](backend-telemetry.md) selector is `prometheus` (process-local scrape, default port `:1234`),
+each finished gRPC hook delivery records three metric families:
+
+| Metric | Labels | Meaning |
+| --- | --- | --- |
+| `alarm_grpc_delivery_total` | `message_kind`, `result` | One increment per finished delivery attempt |
+| `alarm_grpc_delivery_messages_total` | `message_kind`, `result` | Messages included in that attempt |
+| `alarm_grpc_delivery_latency_seconds` | `message_kind` | Histogram of delivery wall time in seconds (`_bucket` / `_count` / `_sum`) |
+
+Every series also carries `sw_backend_instance`.
+`message_kind` is `alarm` or `recovery`.
+`result` says why a delivery succeeded or failed:
+
+| `result` | Meaning |
+| --- | --- |
+| `success` | The peer completed the stream without error |
+| `timeout` | gRPC `DEADLINE_EXCEEDED` (no complete stream within `grpcTimeout`) |
+| `unavailable` | gRPC `UNAVAILABLE` (for example a refused connection) |
+| `error` | Any other gRPC status or non-status failure, including a hook named on the alarm with no live client (removed or empty target) |
+| `interrupted` | The delivery thread was interrupted while waiting for the peer, or the stream ended with gRPC `CANCELLED`. If the wait was interrupted and the stream also closed with another status (for example `DEADLINE_EXCEEDED`), the delivery is recorded as `interrupted`, not `timeout` |
+
+The [OAP self observability dashboard](dashboards-so11y.md) charts these metrics as
+`meter_oap_instance_alarm_grpc_delivery_count`, `meter_oap_instance_alarm_grpc_delivery_messages_count` and
+`meter_oap_instance_alarm_grpc_delivery_latency_percentile`, and the OAP
 [Grafana dashboards](backend-telemetry.md#grafana-visualization) chart the raw series.
 
 ## Update the settings dynamically

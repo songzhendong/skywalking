@@ -59,10 +59,14 @@ public class WebhookCallback extends HttpAlarmCallback {
         for (Map.Entry<String, List<AlarmMessage>> entry : groupedMessages.entrySet()) {
             var hookName = entry.getKey();
             var messages = entry.getValue();
+            // groupMessagesByHook includes every hook on the alarm (webhook + gRPC + …).
+            // Skip foreign hooks before touching setting fields — same pattern as Slack/Wechat.
             var setting = settingsMap.get(hookName);
+            if (setting == null || CollectionUtils.isEmpty(messages)) {
+                continue;
+            }
             List<String> urls = getUrls(setting, isRecovery);
-            if (setting == null || CollectionUtils.isEmpty(urls) || CollectionUtils.isEmpty(
-                    messages)) {
+            if (CollectionUtils.isEmpty(urls)) {
                 continue;
             }
             for (final var url : urls) {

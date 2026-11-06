@@ -28,9 +28,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.skywalking.oap.server.configuration.api.ConfigurationModule;
 import org.apache.skywalking.oap.server.core.CoreModule;
+import org.apache.skywalking.oap.server.core.alarm.AlarmGrpcDeliveryMetrics;
 import org.apache.skywalking.oap.server.core.alarm.AlarmHttpDeliveryMetrics;
 import org.apache.skywalking.oap.server.core.alarm.AlarmModule;
 import org.apache.skywalking.oap.server.core.alarm.HttpAlarmCallback;
+import org.apache.skywalking.oap.server.core.alarm.provider.grpc.GRPCCallback;
 import org.apache.skywalking.oap.server.core.query.enumeration.Scope;
 import org.apache.skywalking.oap.server.core.storage.annotation.Column;
 import org.apache.skywalking.oap.server.core.storage.annotation.ValueColumnMetadata;
@@ -108,6 +110,11 @@ public class AlarmModuleProviderTest {
         verify(handler).setDeliveryMetrics(metricsCaptor.capture());
         assertInstanceOf(AlarmHttpDeliveryMetrics.class, metricsCaptor.getValue());
         assertSame(noop, ReflectUtil.getInternalState(metricsCaptor.getValue(), "metricsCreator"));
+        final ArgumentCaptor<AlarmGrpcDeliveryMetrics> grpcMetricsCaptor =
+            ArgumentCaptor.forClass(AlarmGrpcDeliveryMetrics.class);
+        verify(handler).setGrpcDeliveryMetrics(grpcMetricsCaptor.capture());
+        assertInstanceOf(AlarmGrpcDeliveryMetrics.class, grpcMetricsCaptor.getValue());
+        assertSame(noop, ReflectUtil.getInternalState(grpcMetricsCaptor.getValue(), "metricsCreator"));
         verify(handler).init(any());
     }
 
@@ -115,7 +122,9 @@ public class AlarmModuleProviderTest {
     public void deliveryMetricsAndHookTypesReachHttpHooks() throws Exception {
         final NotifyHandler handler = ReflectUtil.getInternalState(moduleProvider, "notifyHandler");
         final AlarmHttpDeliveryMetrics metrics = new AlarmHttpDeliveryMetrics(new MetricsCreatorNoop());
+        final AlarmGrpcDeliveryMetrics grpcMetrics = new AlarmGrpcDeliveryMetrics(new MetricsCreatorNoop());
         handler.setDeliveryMetrics(metrics);
+        handler.setGrpcDeliveryMetrics(grpcMetrics);
 
         final Map<String, String> expectedHookTypes = Map.of(
             "WebhookCallback", AlarmHooksType.webhook.name(),
@@ -139,6 +148,17 @@ public class AlarmModuleProviderTest {
             assertSame(metrics, ReflectUtil.getInternalState(hook, "deliveryMetrics"), name);
             assertEquals(expectedHookTypes.get(name), ReflectUtil.getInternalState(hook, "hookType"), name);
         }
+        final GRPCCallback grpcHook = handler.buildCallbacks()
+                                             .stream()
+                                             .filter(GRPCCallback.class::isInstance)
+                                             .map(GRPCCallback.class::cast)
+                                             .findFirst()
+                                             .orElseThrow();
+        assertSame(grpcMetrics, ReflectUtil.getInternalState(grpcHook, "deliveryMetrics"));
+        assertEquals(
+            AlarmModuleConfig.DEFAULT_GRPC_TIMEOUT_SECONDS,
+            (long) ReflectUtil.getInternalState(grpcHook, "deadlineSeconds")
+        );
     }
 
     @Test
@@ -163,6 +183,13 @@ public class AlarmModuleProviderTest {
     }
 
     @Test
+    public void grpcTimeoutFallsBack() {
+        assertEquals(7L, AlarmModuleProvider.grpcTimeout(7));
+        assertEquals(AlarmModuleConfig.DEFAULT_GRPC_TIMEOUT_SECONDS, AlarmModuleProvider.grpcTimeout(0));
+        assertEquals(AlarmModuleConfig.DEFAULT_GRPC_TIMEOUT_SECONDS, AlarmModuleProvider.grpcTimeout(-3));
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
     public void configuredHttpTimeoutReachesTheHttpHooks() throws Exception {
         final AlarmModuleConfig config = new AlarmModuleConfig();
@@ -172,6 +199,7 @@ public class AlarmModuleProviderTest {
 
         final NotifyHandler handler = ReflectUtil.getInternalState(moduleProvider, "notifyHandler");
         handler.setDeliveryMetrics(new AlarmHttpDeliveryMetrics(new MetricsCreatorNoop()));
+        handler.setGrpcDeliveryMetrics(new AlarmGrpcDeliveryMetrics(new MetricsCreatorNoop()));
         final HttpClient client = ReflectUtil.getInternalState(handler, "httpClient");
         assertEquals(Duration.ofSeconds(3), client.connectTimeout().orElseThrow());
         final List<HttpAlarmCallback> hooks = handler.buildCallbacks()
@@ -185,5 +213,25 @@ public class AlarmModuleProviderTest {
             assertSame(client, ReflectUtil.getInternalState(hook, "httpClient"), name);
             assertEquals(Duration.ofSeconds(3), ReflectUtil.getInternalState(hook, "timeout"), name);
         }
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void configuredGrpcTimeoutReachesTheGrpcHook() throws Exception {
+        final AlarmModuleConfig config = new AlarmModuleConfig();
+        config.setGrpcTimeout(3);
+        ((ModuleProvider.ConfigCreator<AlarmModuleConfig>) moduleProvider.newConfigCreator()).onInitialized(config);
+        moduleProvider.prepare();
+
+        final NotifyHandler handler = ReflectUtil.getInternalState(moduleProvider, "notifyHandler");
+        handler.setDeliveryMetrics(new AlarmHttpDeliveryMetrics(new MetricsCreatorNoop()));
+        handler.setGrpcDeliveryMetrics(new AlarmGrpcDeliveryMetrics(new MetricsCreatorNoop()));
+        final GRPCCallback grpcHook = handler.buildCallbacks()
+                                             .stream()
+                                             .filter(GRPCCallback.class::isInstance)
+                                             .map(GRPCCallback.class::cast)
+                                             .findFirst()
+                                             .orElseThrow();
+        assertEquals(3L, (long) ReflectUtil.getInternalState(grpcHook, "deadlineSeconds"));
     }
 }

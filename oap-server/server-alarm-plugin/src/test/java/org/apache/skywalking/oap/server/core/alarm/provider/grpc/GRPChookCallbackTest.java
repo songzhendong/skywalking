@@ -20,6 +20,8 @@ package org.apache.skywalking.oap.server.core.alarm.provider.grpc;
 
 import com.google.common.collect.Lists;
 import io.grpc.Server;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
 
@@ -31,10 +33,18 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import org.apache.skywalking.oap.server.core.alarm.AlarmGrpcDeliveryMetrics;
 import org.apache.skywalking.oap.server.core.alarm.AlarmMessage;
 import org.apache.skywalking.oap.server.core.alarm.AlarmRecoveryMessage;
 import org.apache.skywalking.oap.server.core.alarm.grpc.AlarmServiceGrpc;
+import org.apache.skywalking.oap.server.telemetry.api.CounterMetrics;
+import org.apache.skywalking.oap.server.telemetry.api.HistogramMetrics;
+import org.apache.skywalking.oap.server.telemetry.api.MetricsTag;
+import org.apache.skywalking.oap.server.telemetry.none.MetricsCreatorNoop;
 import org.apache.skywalking.oap.server.core.alarm.grpc.Response;
 import org.apache.skywalking.oap.server.core.alarm.provider.AlarmHooksType;
 import org.apache.skywalking.oap.server.core.alarm.provider.AlarmRulesWatcher;
@@ -48,6 +58,8 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class GRPChookCallbackTest {
 
@@ -71,7 +83,7 @@ public class GRPChookCallbackTest {
         rules.getGrpcAlarmSettingMap().put(setting2.getFormattedName(), setting2);
 
         alarmRulesWatcher = new AlarmRulesWatcher(rules, null, null);
-        grpcCallback = new GRPCCallback(alarmRulesWatcher);
+        grpcCallback = new GRPCCallback(alarmRulesWatcher, noopMetrics());
         mockAlarmMessage(setting1.getFormattedName(), setting2.getFormattedName());
         mockAlarmRecoveryMessage(setting1.getFormattedName(), setting2.getFormattedName());
     }
@@ -90,9 +102,85 @@ public class GRPChookCallbackTest {
         rules.getGrpcAlarmSettingMap().put(setting1.getFormattedName(), setting1);
         rules.getGrpcAlarmSettingMap().put(setting2.getFormattedName(), setting2);
         alarmRulesWatcher = new AlarmRulesWatcher(rules, null, null);
-        grpcCallback = new GRPCCallback(alarmRulesWatcher);
+        grpcCallback = new GRPCCallback(alarmRulesWatcher, noopMetrics());
         grpcCallback.doAlarm(alarmMessageList);
         grpcCallback.doAlarmRecovery(alarmRecoveryMessageList);
+    }
+
+    @Test
+    public void shouldRecordSuccessMetricsAgainstLiveServer() throws Exception {
+        final int port = freePort();
+        final RecordingAlarmHandler handler = new RecordingAlarmHandler();
+        final Server server = NettyServerBuilder.forAddress(new InetSocketAddress("127.0.0.1", port))
+            .addService(handler)
+            .build()
+            .start();
+        final RecordingGrpcMetrics metrics = new RecordingGrpcMetrics();
+        try {
+            Rules rules = new Rules();
+            GRPCAlarmSetting setting = setting("metrics-hook", true, port);
+            rules.getGrpcAlarmSettingMap().put(setting.getFormattedName(), setting);
+            AlarmRulesWatcher watcher = new AlarmRulesWatcher(rules, null, null);
+            GRPCCallback callback = new GRPCCallback(watcher, metrics.metrics);
+
+            AlarmMessage alarm = alarmMessage(setting.getFormattedName(), "metrics-alarm");
+            callback.doAlarm(Collections.singletonList(alarm));
+            callback.doAlarmRecovery(Collections.singletonList(new AlarmRecoveryMessage(alarm)));
+
+            assertEquals(1, metrics.successAlarmDeliveries.get());
+            assertEquals(1, metrics.successRecoveryDeliveries.get());
+            assertEquals(1, metrics.successAlarmMessages.get());
+            assertEquals(1, metrics.successRecoveryMessages.get());
+            assertEquals(2, metrics.latencyObservations.get());
+            assertTrue(metrics.lastLatencySeconds.get() >= 0);
+
+            watcher.notify(new Rules());
+            callback.doAlarm(Collections.emptyList());
+        } finally {
+            server.shutdownNow();
+            server.awaitTermination(5, TimeUnit.SECONDS);
+        }
+    }
+
+    @Test
+    public void interruptedWinsOverStreamTimeoutWhenClassifyingResult() {
+        final StatusRuntimeException deadline =
+            new StatusRuntimeException(Status.DEADLINE_EXCEEDED.withDescription("deadline"));
+        assertEquals(
+            AlarmGrpcDeliveryMetrics.RESULT_INTERRUPTED,
+            GRPCCallback.classifyDeliveryResult(true, deadline)
+        );
+        assertEquals(
+            AlarmGrpcDeliveryMetrics.RESULT_TIMEOUT,
+            GRPCCallback.classifyDeliveryResult(false, deadline)
+        );
+        assertEquals(
+            AlarmGrpcDeliveryMetrics.RESULT_SUCCESS,
+            GRPCCallback.classifyDeliveryResult(false, null)
+        );
+    }
+
+    @Test
+    public void shouldRecordUnavailableWhenTargetRefuses() throws Exception {
+        final int closedPort = freePort();
+        final RecordingGrpcMetrics metrics = new RecordingGrpcMetrics();
+        Rules rules = new Rules();
+        GRPCAlarmSetting setting = setting("down-hook", true, closedPort);
+        rules.getGrpcAlarmSettingMap().put(setting.getFormattedName(), setting);
+        AlarmRulesWatcher watcher = new AlarmRulesWatcher(rules, null, null);
+        GRPCCallback callback = new GRPCCallback(watcher, metrics.metrics);
+
+        AlarmMessage alarm = alarmMessage(setting.getFormattedName(), "down-alarm");
+        callback.doAlarm(Collections.singletonList(alarm));
+
+        assertEquals(1, metrics.unavailableDeliveries.get());
+        assertEquals(1, metrics.unavailableMessages.get());
+        assertEquals(0, metrics.errorDeliveries.get());
+        assertEquals(0, metrics.timeoutDeliveries.get());
+        assertEquals(1, metrics.latencyObservations.get());
+
+        watcher.notify(new Rules());
+        callback.doAlarm(Collections.emptyList());
     }
 
     /**
@@ -114,7 +202,7 @@ public class GRPChookCallbackTest {
             initial.getGrpcAlarmSettingMap().put(setting.getFormattedName(), setting);
 
             AlarmRulesWatcher watcher = new AlarmRulesWatcher(initial, null, null);
-            GRPCCallback callback = new GRPCCallback(watcher);
+            GRPCCallback callback = new GRPCCallback(watcher, noopMetrics());
 
             watcher.notify(new Rules());
             assertDoesNotThrow(() -> callback.doAlarm(Collections.emptyList()));
@@ -161,7 +249,7 @@ public class GRPChookCallbackTest {
         initial.getGrpcAlarmSettingMap().put(drop.getFormattedName(), drop);
 
         AlarmRulesWatcher watcher = new AlarmRulesWatcher(initial, null, null);
-        GRPCCallback callback = new GRPCCallback(watcher);
+        GRPCCallback callback = new GRPCCallback(watcher, noopMetrics());
         final GRPCClient keptClient = ReflectUtil.<Map<String, GRPCClient>>getInternalState(
             callback, "grpcClientMap").get(keep.getFormattedName());
         final GRPCClient droppedClient = ReflectUtil.<Map<String, GRPCClient>>getInternalState(
@@ -197,7 +285,7 @@ public class GRPChookCallbackTest {
         initial.getGrpcAlarmSettingMap().put(setting.getFormattedName(), setting);
 
         AlarmRulesWatcher watcher = new AlarmRulesWatcher(initial, null, null);
-        GRPCCallback callback = new GRPCCallback(watcher);
+        GRPCCallback callback = new GRPCCallback(watcher, noopMetrics());
         final GRPCClient original = ReflectUtil.<Map<String, GRPCClient>>getInternalState(
             callback, "grpcClientMap").get(setting.getFormattedName());
 
@@ -225,7 +313,7 @@ public class GRPChookCallbackTest {
         initial.getGrpcAlarmSettingMap().put(keep.getFormattedName(), keep);
 
         AlarmRulesWatcher watcher = new AlarmRulesWatcher(initial, null, null);
-        GRPCCallback callback = new GRPCCallback(watcher);
+        GRPCCallback callback = new GRPCCallback(watcher, noopMetrics());
 
         Rules dirty = new Rules();
         dirty.getGrpcAlarmSettingMap().put(keep.getFormattedName(), keep);
@@ -241,18 +329,19 @@ public class GRPChookCallbackTest {
     }
 
     /**
-     * Alarm messages that name a hook missing from settings must be skipped, not NPE
-     * inside send when looking up host/port.
+     * Alarm messages that name a hook missing from settings must not NPE, and must still
+     * count as a failed delivery (same outage visibility as a WeLink token failure).
      */
     @Test
-    public void shouldSkipMessageHookMissingFromSettings() throws IOException {
+    public void shouldRecordErrorWhenMessageHookMissingFromSettings() throws IOException {
         final int port = freePort();
         Rules rules = new Rules();
         GRPCAlarmSetting keep = setting("keep-hook", true, port);
         rules.getGrpcAlarmSettingMap().put(keep.getFormattedName(), keep);
 
+        final RecordingGrpcMetrics metrics = new RecordingGrpcMetrics();
         AlarmRulesWatcher watcher = new AlarmRulesWatcher(rules, null, null);
-        GRPCCallback callback = new GRPCCallback(watcher);
+        GRPCCallback callback = new GRPCCallback(watcher, metrics.metrics);
 
         AlarmMessage message = new AlarmMessage();
         message.setId0("1");
@@ -263,12 +352,152 @@ public class GRPChookCallbackTest {
         message.setRuleName("mock_rule");
         message.setStartTime(System.currentTimeMillis());
         message.setTags(Arrays.asList(new Tag("key", "value")));
-        message.getHooks().add("missing-hook.grpc");
+        // Formatted name is type + '.' + id (AlarmHookSettings.getFormattedName).
+        message.getHooks().add(AlarmHooksType.gRPC.name() + ".missing-hook");
 
         assertDoesNotThrow(() -> callback.doAlarm(Collections.singletonList(message)));
+        assertEquals(1, metrics.errorDeliveries.get());
+        assertEquals(1, metrics.errorMessages.get());
+        assertEquals(1, metrics.latencyObservations.get());
 
         watcher.notify(new Rules());
         callback.doAlarm(Collections.emptyList());
+    }
+
+    /**
+     * The same AlarmMessage may also list webhook/slack hooks. Those must not be counted
+     * as gRPC delivery errors when settings are empty or the hook is foreign.
+     */
+    @Test
+    public void shouldIgnoreForeignHooksWhenRecordingSkippedDelivery() {
+        final RecordingGrpcMetrics metrics = new RecordingGrpcMetrics();
+        AlarmRulesWatcher watcher = new AlarmRulesWatcher(new Rules(), null, null);
+        GRPCCallback callback = new GRPCCallback(watcher, metrics.metrics);
+
+        AlarmMessage message = new AlarmMessage();
+        message.setId0("1");
+        message.setScope(Scope.Service.name());
+        message.setName("mixed hooks");
+        message.setAlarmMessage("message");
+        message.setRuleName("mock_rule");
+        message.setStartTime(System.currentTimeMillis());
+        message.getHooks().add(AlarmHooksType.webhook.name() + ".custom");
+        message.getHooks().add(AlarmHooksType.gRPC.name() + ".gone");
+
+        assertDoesNotThrow(() -> callback.doAlarm(Collections.singletonList(message)));
+        // Only the gRPC.* hook is a skipped gRPC delivery; webhook.* is ignored.
+        assertEquals(1, metrics.errorDeliveries.get());
+        assertEquals(1, metrics.errorMessages.get());
+    }
+
+    /**
+     * Clearing every gRPC hook through dynamic config must still count deliveries for
+     * messages that name the old hook, so the outage is visible on telemetry.prometheus.
+     */
+    @Test
+    public void shouldRecordErrorWhenAllGrpcSettingsCleared() throws IOException {
+        final int port = freePort();
+        Rules initial = new Rules();
+        GRPCAlarmSetting setting = setting("cleared-hook", true, port);
+        initial.getGrpcAlarmSettingMap().put(setting.getFormattedName(), setting);
+
+        final RecordingGrpcMetrics metrics = new RecordingGrpcMetrics();
+        AlarmRulesWatcher watcher = new AlarmRulesWatcher(initial, null, null);
+        GRPCCallback callback = new GRPCCallback(watcher, metrics.metrics);
+
+        watcher.notify(new Rules());
+        assertDoesNotThrow(() -> callback.doAlarm(
+            Collections.singletonList(alarmMessage(setting.getFormattedName(), "cleared-settings-alarm"))
+        ));
+        assertEquals(1, metrics.errorDeliveries.get());
+        assertEquals(1, metrics.errorMessages.get());
+        assertEquals(1, metrics.latencyObservations.get());
+    }
+
+    /**
+     * Interrupt while waiting for the peer must still finish the attempt as {@code interrupted},
+     * after the peer completes (wait loop keeps running once the flag is set).
+     */
+    @Test
+    public void shouldRecordInterruptedWhenCallerInterruptedDuringWait() throws Exception {
+        final int port = freePort();
+        final CountDownLatch release = new CountDownLatch(1);
+        final CountDownLatch entered = new CountDownLatch(1);
+        final Server server = NettyServerBuilder.forAddress(new InetSocketAddress("127.0.0.1", port))
+            .addService(new StallingAlarmHandler(entered, release))
+            .build()
+            .start();
+        final RecordingGrpcMetrics metrics = new RecordingGrpcMetrics();
+        try {
+            Rules rules = new Rules();
+            GRPCAlarmSetting setting = setting("interrupt-hook", true, port);
+            rules.getGrpcAlarmSettingMap().put(setting.getFormattedName(), setting);
+            AlarmRulesWatcher watcher = new AlarmRulesWatcher(rules, null, null);
+            GRPCCallback callback = new GRPCCallback(watcher, metrics.metrics);
+
+            final Thread caller = new Thread(() ->
+                callback.doAlarm(Collections.singletonList(alarmMessage(setting.getFormattedName(), "interrupt-alarm")))
+            );
+            caller.start();
+            assertTrue(entered.await(5, TimeUnit.SECONDS));
+            caller.interrupt();
+            release.countDown();
+            caller.join(10_000);
+            assertTrue(!caller.isAlive(), "caller should finish after the peer completes");
+
+            assertEquals(1, metrics.interruptedDeliveries.get());
+            assertEquals(1, metrics.interruptedMessages.get());
+            assertEquals(1, metrics.latencyObservations.get());
+
+            watcher.notify(new Rules());
+            callback.doAlarm(Collections.emptyList());
+        } finally {
+            release.countDown();
+            server.shutdownNow();
+            server.awaitTermination(5, TimeUnit.SECONDS);
+        }
+    }
+
+    /**
+     * A peer that never completes the stream past the client deadline must finish as
+     * {@code timeout} (gRPC {@code DEADLINE_EXCEEDED}), same visibility as HTTP's timeout path.
+     */
+    @Test
+    public void shouldRecordTimeoutWhenPeerExceedsDeadline() throws Exception {
+        final int port = freePort();
+        final CountDownLatch release = new CountDownLatch(1);
+        final CountDownLatch entered = new CountDownLatch(1);
+        final Server server = NettyServerBuilder.forAddress(new InetSocketAddress("127.0.0.1", port))
+            .addService(new StallingAlarmHandler(entered, release))
+            .build()
+            .start();
+        final RecordingGrpcMetrics metrics = new RecordingGrpcMetrics();
+        try {
+            Rules rules = new Rules();
+            GRPCAlarmSetting setting = setting("timeout-hook", true, port);
+            rules.getGrpcAlarmSettingMap().put(setting.getFormattedName(), setting);
+            AlarmRulesWatcher watcher = new AlarmRulesWatcher(rules, null, null);
+            // 1s deadline mirrors HttpAlarmCallbackTest's injected 1s timeout.
+            GRPCCallback callback = new GRPCCallback(watcher, metrics.metrics, 1L);
+
+            callback.doAlarm(Collections.singletonList(alarmMessage(setting.getFormattedName(), "timeout-alarm")));
+
+            assertTrue(entered.await(5, TimeUnit.SECONDS));
+            assertEquals(1, metrics.timeoutDeliveries.get());
+            assertEquals(1, metrics.timeoutMessages.get());
+            assertEquals(1, metrics.latencyObservations.get());
+
+            watcher.notify(new Rules());
+            callback.doAlarm(Collections.emptyList());
+        } finally {
+            release.countDown();
+            server.shutdownNow();
+            server.awaitTermination(5, TimeUnit.SECONDS);
+        }
+    }
+
+    private static AlarmGrpcDeliveryMetrics noopMetrics() {
+        return new AlarmGrpcDeliveryMetrics(new MetricsCreatorNoop());
     }
 
     private static GRPCAlarmSetting setting(String name, boolean isDefault, int port) {
@@ -295,6 +524,139 @@ public class GRPChookCallbackTest {
     private static int freePort() throws IOException {
         try (ServerSocket socket = new ServerSocket(0)) {
             return socket.getLocalPort();
+        }
+    }
+
+    private static final class RecordingGrpcMetrics {
+        private final AtomicInteger successAlarmDeliveries = new AtomicInteger();
+        private final AtomicInteger successRecoveryDeliveries = new AtomicInteger();
+        private final AtomicInteger successAlarmMessages = new AtomicInteger();
+        private final AtomicInteger successRecoveryMessages = new AtomicInteger();
+        private final AtomicInteger unavailableOrErrorDeliveries = new AtomicInteger();
+        private final AtomicInteger unavailableOrErrorMessages = new AtomicInteger();
+        private final AtomicInteger unavailableDeliveries = new AtomicInteger();
+        private final AtomicInteger unavailableMessages = new AtomicInteger();
+        private final AtomicInteger errorDeliveries = new AtomicInteger();
+        private final AtomicInteger errorMessages = new AtomicInteger();
+        private final AtomicInteger interruptedDeliveries = new AtomicInteger();
+        private final AtomicInteger interruptedMessages = new AtomicInteger();
+        private final AtomicInteger timeoutDeliveries = new AtomicInteger();
+        private final AtomicInteger timeoutMessages = new AtomicInteger();
+        private final AtomicInteger latencyObservations = new AtomicInteger();
+        private final AtomicReference<Double> lastLatencySeconds = new AtomicReference<>(0.0);
+        private final AlarmGrpcDeliveryMetrics metrics;
+
+        private RecordingGrpcMetrics() {
+            metrics = new AlarmGrpcDeliveryMetrics(new MetricsCreatorNoop() {
+                @Override
+                public CounterMetrics createCounter(final String name, final String tips, final MetricsTag.Keys tagKeys,
+                                                    final MetricsTag.Values tagValues) {
+                    final String kind = tagValues.getValues()[0];
+                    final String result = tagValues.getValues().length > 1 ? tagValues.getValues()[1] : "";
+                    return new CounterMetrics() {
+                        @Override
+                        public void inc() {
+                            inc(1);
+                        }
+
+                        @Override
+                        public void inc(final double value) {
+                            if ("alarm_grpc_delivery_total".equals(name)) {
+                                if (AlarmGrpcDeliveryMetrics.RESULT_SUCCESS.equals(result)) {
+                                    if (AlarmGrpcDeliveryMetrics.KIND_ALARM.equals(kind)) {
+                                        successAlarmDeliveries.incrementAndGet();
+                                    } else if (AlarmGrpcDeliveryMetrics.KIND_RECOVERY.equals(kind)) {
+                                        successRecoveryDeliveries.incrementAndGet();
+                                    }
+                                } else if (AlarmGrpcDeliveryMetrics.RESULT_INTERRUPTED.equals(result)) {
+                                    interruptedDeliveries.incrementAndGet();
+                                } else if (AlarmGrpcDeliveryMetrics.RESULT_TIMEOUT.equals(result)) {
+                                    timeoutDeliveries.incrementAndGet();
+                                } else if (AlarmGrpcDeliveryMetrics.RESULT_UNAVAILABLE.equals(result)) {
+                                    unavailableDeliveries.incrementAndGet();
+                                    unavailableOrErrorDeliveries.incrementAndGet();
+                                } else if (AlarmGrpcDeliveryMetrics.RESULT_ERROR.equals(result)) {
+                                    errorDeliveries.incrementAndGet();
+                                    unavailableOrErrorDeliveries.incrementAndGet();
+                                } else {
+                                    unavailableOrErrorDeliveries.incrementAndGet();
+                                }
+                            } else if ("alarm_grpc_delivery_messages_total".equals(name)) {
+                                if (AlarmGrpcDeliveryMetrics.RESULT_SUCCESS.equals(result)) {
+                                    if (AlarmGrpcDeliveryMetrics.KIND_ALARM.equals(kind)) {
+                                        successAlarmMessages.addAndGet((int) value);
+                                    } else if (AlarmGrpcDeliveryMetrics.KIND_RECOVERY.equals(kind)) {
+                                        successRecoveryMessages.addAndGet((int) value);
+                                    }
+                                } else if (AlarmGrpcDeliveryMetrics.RESULT_INTERRUPTED.equals(result)) {
+                                    interruptedMessages.addAndGet((int) value);
+                                } else if (AlarmGrpcDeliveryMetrics.RESULT_TIMEOUT.equals(result)) {
+                                    timeoutMessages.addAndGet((int) value);
+                                } else if (AlarmGrpcDeliveryMetrics.RESULT_UNAVAILABLE.equals(result)) {
+                                    unavailableMessages.addAndGet((int) value);
+                                    unavailableOrErrorMessages.addAndGet((int) value);
+                                } else if (AlarmGrpcDeliveryMetrics.RESULT_ERROR.equals(result)) {
+                                    errorMessages.addAndGet((int) value);
+                                    unavailableOrErrorMessages.addAndGet((int) value);
+                                } else {
+                                    unavailableOrErrorMessages.addAndGet((int) value);
+                                }
+                            }
+                        }
+                    };
+                }
+
+                @Override
+                public HistogramMetrics createHistogramMetric(final String name, final String tips,
+                                                             final MetricsTag.Keys tagKeys,
+                                                             final MetricsTag.Values tagValues,
+                                                             final double... buckets) {
+                    return new HistogramMetrics() {
+                        @Override
+                        public void observe(final double value) {
+                            latencyObservations.incrementAndGet();
+                            lastLatencySeconds.set(value);
+                        }
+                    };
+                }
+            });
+        }
+    }
+
+    private static final class StallingAlarmHandler extends AlarmServiceGrpc.AlarmServiceImplBase {
+        private final CountDownLatch entered;
+        private final CountDownLatch release;
+
+        private StallingAlarmHandler(final CountDownLatch entered, final CountDownLatch release) {
+            this.entered = entered;
+            this.release = release;
+        }
+
+        @Override
+        public StreamObserver<org.apache.skywalking.oap.server.core.alarm.grpc.AlarmMessage> doAlarm(
+            StreamObserver<Response> responseObserver) {
+            return new StreamObserver<org.apache.skywalking.oap.server.core.alarm.grpc.AlarmMessage>() {
+                @Override
+                public void onNext(org.apache.skywalking.oap.server.core.alarm.grpc.AlarmMessage value) {
+                }
+
+                @Override
+                public void onError(Throwable throwable) {
+                    responseObserver.onError(throwable);
+                }
+
+                @Override
+                public void onCompleted() {
+                    entered.countDown();
+                    try {
+                        release.await(30, TimeUnit.SECONDS);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                    responseObserver.onNext(Response.newBuilder().build());
+                    responseObserver.onCompleted();
+                }
+            };
         }
     }
 

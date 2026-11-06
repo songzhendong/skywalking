@@ -783,6 +783,58 @@ input:
         sw_backend_instance: test-oap
         hook_type: webhook
       value: 50.0
+  alarm_grpc_delivery_total:
+    - labels:
+        service: test-service
+        host_name: test-host
+        sw_backend_instance: test-oap
+        message_kind: alarm
+        result: success
+      value: 100.0
+  alarm_grpc_delivery_messages_total:
+    - labels:
+        service: test-service
+        host_name: test-host
+        sw_backend_instance: test-oap
+        message_kind: alarm
+        result: success
+      value: 100.0
+  alarm_grpc_delivery_latency_seconds:
+    - labels:
+        le: '0.05'
+        service: test-service
+        host_name: test-host
+        sw_backend_instance: test-oap
+        message_kind: alarm
+      value: 10.0
+    - labels:
+        le: '0.1'
+        service: test-service
+        host_name: test-host
+        sw_backend_instance: test-oap
+        message_kind: alarm
+      value: 20.0
+    - labels:
+        le: '0.5'
+        service: test-service
+        host_name: test-host
+        sw_backend_instance: test-oap
+        message_kind: alarm
+      value: 30.0
+    - labels:
+        le: '1'
+        service: test-service
+        host_name: test-host
+        sw_backend_instance: test-oap
+        message_kind: alarm
+      value: 40.0
+    - labels:
+        le: '5'
+        service: test-service
+        host_name: test-host
+        sw_backend_instance: test-oap
+        message_kind: alarm
+      value: 50.0
 expected:
   meter_oap_instance_cpu_percentage:
     entities:
@@ -1687,5 +1739,68 @@ expected:
           service: test-service
           host_name: test-host
           hook_type: webhook
+          le: '5000'
+        value: 25.0
+  meter_oap_instance_alarm_grpc_delivery_count:
+    entities:
+      - scope: SERVICE_INSTANCE
+        service: test-service
+        instance: test-host
+        layer: SO11Y_OAP
+    samples:
+      - labels:
+          service: test-service
+          host_name: test-host
+          message_kind: alarm
+          result: success
+        value: 50.0
+  meter_oap_instance_alarm_grpc_delivery_messages_count:
+    entities:
+      - scope: SERVICE_INSTANCE
+        service: test-service
+        instance: test-host
+        layer: SO11Y_OAP
+    samples:
+      - labels:
+          service: test-service
+          host_name: test-host
+          message_kind: alarm
+          result: success
+        value: 50.0
+  meter_oap_instance_alarm_grpc_delivery_latency_percentile:
+    entities:
+      - scope: SERVICE_INSTANCE
+        service: test-service
+        instance: test-host
+        layer: SO11Y_OAP
+    samples:
+      - labels:
+          service: test-service
+          host_name: test-host
+          message_kind: alarm
+          le: '50'
+        value: 5.0
+      - labels:
+          service: test-service
+          host_name: test-host
+          message_kind: alarm
+          le: '100'
+        value: 10.0
+      - labels:
+          service: test-service
+          host_name: test-host
+          message_kind: alarm
+          le: '500'
+        value: 15.0
+      - labels:
+          service: test-service
+          host_name: test-host
+          message_kind: alarm
+          le: '1000'
+        value: 20.0
+      - labels:
+          service: test-service
+          host_name: test-host
+          message_kind: alarm
           le: '5000'
         value: 25.0
