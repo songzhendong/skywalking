@@ -24,7 +24,9 @@ rules:
       level: WARNING
       receivers: lisi
     hooks:
+      # Same style as webhook.custom: name the success gRPC hook on the rule, do not rely on is-default alone.
       - webhook.custom
+      - gRPC.default
   # service_percentile > 10ms
   service_percentile_rule:
     expression: sum(service_percentile{p='50,75,90,95,99'} > 100) >= 3
@@ -36,6 +38,8 @@ rules:
       receivers: lisi
     hooks:
       - webhook.custom
+      # Refused target: so11y must expose result=unavailable next to the gRPC.default success path.
+      - gRPC.down
   comp_rule:
     expression: sum((service_resp_time > 100) && (service_sla > 1)) >= 1
     period: 5
@@ -63,3 +67,13 @@ hooks:
         - http://none:9090/alarm/receive
       recovery-urls:
         - http://none:9090/alarm/receive
+  # Key must be gRPC (AlarmHooksType.gRPC.name()); lowercase "grpc" is ignored and rules
+  # that name gRPC.* hooks then fail startup in checkSpecificHooks.
+  gRPC:
+    default:
+      is-default: true
+      target-host: provider
+      target-port: 9898
+    down:
+      target-host: 127.0.0.1
+      target-port: 1

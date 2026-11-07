@@ -47,6 +47,25 @@
         awk -v v="$val" 'BEGIN { if ((v+0) <= 0) exit 1 }';
         echo alarm-http-delivery-so11y-ok
       expected: expected/alarm-http-delivery-so11y.yml
+    # so11y: after gRPC delivery to provider:9898, :1234 must expose the three alarm_grpc_* series.
+    - query: |
+        m=$(curl -s http://${oap_host}:${oap_1234});
+        echo "$m" | grep 'alarm_grpc_delivery_total{' | grep 'message_kind="alarm"' | grep 'result="success"' >/dev/null;
+        echo "$m" | grep 'alarm_grpc_delivery_messages_total{' | grep 'message_kind="alarm"' | grep 'result="success"' >/dev/null;
+        echo "$m" | grep 'alarm_grpc_delivery_latency_seconds_count{' | grep 'message_kind="alarm"' >/dev/null;
+        val=$(echo "$m" | grep 'alarm_grpc_delivery_total{' | grep 'message_kind="alarm"' | grep 'result="success"' | awk '{print $2}' | head -1);
+        awk -v v="$val" 'BEGIN { if ((v+0) <= 0) exit 1 }';
+        echo alarm-grpc-delivery-so11y-ok
+      expected: expected/alarm-grpc-delivery-so11y.yml
+    # so11y: gRPC.down (127.0.0.1:1) must expose result=unavailable on the same scrape.
+    - query: |
+        m=$(curl -s http://${oap_host}:${oap_1234});
+        echo "$m" | grep 'alarm_grpc_delivery_total{' | grep 'message_kind="alarm"' | grep 'result="unavailable"' >/dev/null;
+        echo "$m" | grep 'alarm_grpc_delivery_messages_total{' | grep 'message_kind="alarm"' | grep 'result="unavailable"' >/dev/null;
+        val=$(echo "$m" | grep 'alarm_grpc_delivery_total{' | grep 'message_kind="alarm"' | grep 'result="unavailable"' | awk '{print $2}' | head -1);
+        awk -v v="$val" 'BEGIN { if ((v+0) <= 0) exit 1 }';
+        echo alarm-grpc-delivery-unavailable-so11y-ok
+      expected: expected/alarm-grpc-delivery-unavailable-so11y.yml
     # after silence alarm list WARNING,receivers=lisi
     - query: |
         sleep 30;
