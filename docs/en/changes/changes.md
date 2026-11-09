@@ -10,6 +10,9 @@
 * Fix one gRPC alarm hook with a malformed target, such as `http://host` or `host:port` as the host, stopping every gRPC hook: building its client threw and aborted the whole gRPC callback on each alarm, and a malformed target in the static alarm settings stopped OAP from starting. That hook is now skipped with an error log, at boot too, and a hook whose target becomes malformed keeps its previous client.
 * Make the cluster coordinator's watcher list safe for a watcher that registers after the coordinator started, as the Cilium fetcher does: the plain list shared with the coordinator's notify thread could throw a `ConcurrentModificationException` there or miss the new watcher.
 * Add the `OTLP_VIRTUAL_GATEWAY` layer: the OTLP trace analysis draws a gateway listed in `gateways.yml` as a node of this layer, the OTLP counterpart of the agent path's `VIRTUAL_GATEWAY`, as it already puts the databases, caches and brokers it conjectures under the `OTLP_VIRTUAL_*` layers. The shipped `tal/otlp-general.yaml` uses it; a copy of the rule file made from an earlier release keeps drawing `VIRTUAL_GATEWAY` until it is updated.
+* Fix the webhook alarm hook throwing a `NullPointerException` when an alarm rule names both webhook and gRPC hooks: webhook delivery looked up settings before skipping foreign hook names.
+* Add configurable gRPC alarm hook stream deadline `alarm.default.grpcTimeout` / `SW_ALARM_GRPC_TIMEOUT` (default `10` seconds; previously a fixed 10-second deadline).
+* Record gRPC alarm hook deliveries on the shared alarm delivery metrics with `hook_type=gRPC`.
 
 #### UI
 
