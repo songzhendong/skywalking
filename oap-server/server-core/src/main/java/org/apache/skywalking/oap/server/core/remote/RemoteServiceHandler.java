@@ -140,7 +140,12 @@ public class RemoteServiceHandler extends RemoteServiceGrpc.RemoteServiceImplBas
                             LOGGER.error("Can't deserialize data {}, this data is discarded.", message, t);
                             return;
                         }
-                        nextWorker.in(streamData);
+                        try {
+                            nextWorker.in(streamData);
+                        } catch (Exception e) {
+                            remoteInErrorCounter.inc();
+                            LOGGER.error("Remote worker failed to process data {}, this data is discarded.", message, e);
+                        }
                     } else {
                         remoteInTargetNotFoundCounter.inc();
                         LOGGER.warn(
@@ -163,6 +168,8 @@ public class RemoteServiceHandler extends RemoteServiceGrpc.RemoteServiceImplBas
                     }
                     return;
                 }
+                // Transport-level stream failure, not a per-message discard.
+                remoteInErrorCounter.inc();
                 LOGGER.error(throwable.getMessage(), throwable);
             }
 

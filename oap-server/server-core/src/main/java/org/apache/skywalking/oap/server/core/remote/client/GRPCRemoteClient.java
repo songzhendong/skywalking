@@ -20,11 +20,14 @@ package org.apache.skywalking.oap.server.core.remote.client;
 
 import io.grpc.ManagedChannel;
 import io.grpc.Status;
+import io.grpc.StatusException;
+import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import io.netty.handler.ssl.SslContext;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.skywalking.oap.server.core.remote.data.StreamData;
@@ -40,9 +43,7 @@ import org.apache.skywalking.oap.server.library.batchqueue.ThreadPolicy;
 import org.apache.skywalking.oap.server.library.client.grpc.GRPCClient;
 import org.apache.skywalking.oap.server.library.module.ModuleDefineHolder;
 import org.apache.skywalking.oap.server.telemetry.TelemetryModule;
-import org.apache.skywalking.oap.server.telemetry.api.CounterMetrics;
 import org.apache.skywalking.oap.server.telemetry.api.MetricsCreator;
-import org.apache.skywalking.oap.server.telemetry.api.MetricsTag;
 
 /**
  * This is a wrapper of the gRPC client for sending message to each other OAP server. It contains a block queue to
@@ -50,16 +51,21 @@ import org.apache.skywalking.oap.server.telemetry.api.MetricsTag;
  */
 @Slf4j
 public class GRPCRemoteClient implements RemoteClient {
+    /** Max concurrent outbound gRPC streams for one peer. */
+    static final int MAX_CONCURRENT_STREAMS = 10;
+
     private final int bufferSize;
     private final Address address;
     private final AtomicInteger concurrentStreamObserverNumber = new AtomicInteger(0);
+    /** Guards inflight counter updates against concurrent gRPC callbacks. */
+    private final Object inflightLock = new Object();
     private SslContext sslContext;
     private GRPCClient client;
     private BatchQueue<RemoteMessage> queue;
     private String queueName;
     private boolean isConnect;
-    private CounterMetrics remoteOutCounter;
-    private CounterMetrics remoteOutErrorCounter;
+    private volatile boolean closed;
+    private final RemoteClientMetrics metrics;
     private int remoteTimeout;
     private long lastRemoteResourceExhaustedTime = 0;
 
@@ -74,28 +80,10 @@ public class GRPCRemoteClient implements RemoteClient {
         this.remoteTimeout = remoteTimeout;
         this.sslContext = sslContext;
 
-        remoteOutCounter = moduleDefineHolder.find(TelemetryModule.NAME)
-                                             .provider()
-                                             .getService(MetricsCreator.class)
-                                             .createCounter(
-                                                 "remote_out_count",
-                                                 "The number(client side) of inside remote inside aggregate rpc.",
-                                                 new MetricsTag.Keys("dest", "self"), new MetricsTag.Values(
-                                                     address
-                                                         .toString(), "N"
-                                                 )
-                                             );
-        remoteOutErrorCounter = moduleDefineHolder.find(TelemetryModule.NAME)
-                                                  .provider()
-                                                  .getService(MetricsCreator.class)
-                                                  .createCounter(
-                                                      "remote_out_error_count",
-                                                      "The error number(client side) of inside remote inside aggregate rpc.",
-                                                      new MetricsTag.Keys("dest", "self"), new MetricsTag.Values(
-                                                          address
-                                                              .toString(), "N"
-                                                      )
-                                                  );
+        final MetricsCreator metricsCreator = moduleDefineHolder.find(TelemetryModule.NAME)
+                                                                .provider()
+                                                                .getService(MetricsCreator.class);
+        this.metrics = RemoteClientMetrics.forGrpc(metricsCreator, address);
     }
 
     @Override
@@ -154,44 +142,94 @@ public class GRPCRemoteClient implements RemoteClient {
         builder.setNextWorkerName(nextWorkerName);
         builder.setRemoteData(streamData.serialize());
 
-        this.queue.produce(builder.build());
+        // Closed clients are torn down; skip so peer lifecycle does not inflate remote_out_error.
+        if (closed) {
+            return;
+        }
+        // Publish queue usage before produce so BLOCKING backpressure is visible.
+        publishQueueUsed();
+        if (!this.queue.produce(builder.build())) {
+            // produce() can still fail after close races the shutdown path above.
+            if (!closed) {
+                metrics.recordError(RemoteClientMetrics.REASON_ERROR);
+            }
+            return;
+        }
+        publishQueueUsed();
     }
 
     class RemoteMessageConsumer implements HandlerConsumer<RemoteMessage> {
         @Override
         public void consume(List<RemoteMessage> remoteMessages) {
+            publishQueueUsed();
+            final int messageCount = remoteMessages.size();
+            final long[] startNanos = new long[1];
+            final AtomicBoolean streamAcquired = new AtomicBoolean(false);
+            final AtomicBoolean streamFinished = new AtomicBoolean(false);
+            final AtomicBoolean errorRecorded = new AtomicBoolean(false);
             try {
-                StreamObserver<RemoteMessage> streamObserver = createStreamObserver();
+                StreamObserver<RemoteMessage> streamObserver = createStreamObserver(
+                    startNanos, messageCount, streamAcquired, streamFinished, errorRecorded);
+                publishQueueUsed();
                 for (RemoteMessage remoteMessage : remoteMessages) {
-                    remoteOutCounter.inc();
+                    metrics.incOut();
                     streamObserver.onNext(remoteMessage);
                 }
                 streamObserver.onCompleted();
-            } catch (Throwable t) {
-                remoteOutErrorCounter.inc();
+            } catch (RemoteClientClosedException t) {
+                // close() unblocked a stream wait or raced acquire — not an outbound delivery error.
+            } catch (RemoteStreamInterruptedException t) {
+                // reason=interrupted already recorded while waiting for a stream slot.
                 log.error(t.getMessage(), t);
+            } catch (Throwable t) {
+                if (streamAcquired.get()) {
+                    endStream(streamFinished, startNanos[0], messageCount, false);
+                }
+                // Prefer gRPC Status when present; skip if onError already recorded or client closed.
+                if (!closed && errorRecorded.compareAndSet(false, true)) {
+                    if (t instanceof StatusRuntimeException || t instanceof StatusException) {
+                        metrics.recordError(RemoteClientMetrics.reasonOf(Status.fromThrowable(t)));
+                    } else {
+                        metrics.recordError(RemoteClientMetrics.REASON_ERROR);
+                    }
+                }
+                log.error(t.getMessage(), t);
+            } finally {
+                publishQueueUsed();
             }
         }
     }
 
     /**
-     * Create a gRPC stream observer to sending stream data, one stream observer could send multiple stream data by a
-     * single consume. The max number of concurrency allowed at the same time is 10.
-     *
-     * @return stream observer
+     * Create a gRPC stream observer for one consume batch. Concurrency is capped at
+     * {@link #MAX_CONCURRENT_STREAMS}.
      */
-    private StreamObserver<RemoteMessage> createStreamObserver() {
+    private StreamObserver<RemoteMessage> createStreamObserver(final long[] startNanosHolder,
+                                                               final int messageCount,
+                                                               final AtomicBoolean streamAcquired,
+                                                               final AtomicBoolean streamFinished,
+                                                               final AtomicBoolean errorRecorded) {
         int sleepTotalMillis = 0;
         int sleepMillis = 10;
+        long blockedNanos = 0;
 
-        // Control the concurrency of gRPC streaming stub.
-        // If over 10 created and not finished/error, this blocks the method.
-        while (concurrentStreamObserverNumber.get() > 10) {
+        // Wait while the stream limit is already reached; increment happens after this loop.
+        while (concurrentStreamObserverNumber.get() >= MAX_CONCURRENT_STREAMS) {
+            if (closed) {
+                throw new RemoteClientClosedException("Remote client closed while waiting for a stream slot");
+            }
+            final long blockStart = System.nanoTime();
+            publishQueueUsed();
             try {
                 Thread.sleep(sleepMillis);
             } catch (InterruptedException e) {
-                log.error(e.getMessage(), e);
+                Thread.currentThread().interrupt();
+                blockedNanos += System.nanoTime() - blockStart;
+                metrics.addStreamBlockSeconds(blockedNanos / 1_000_000_000d);
+                metrics.recordError(RemoteClientMetrics.REASON_INTERRUPTED);
+                throw new RemoteStreamInterruptedException("Interrupted while waiting for a remote stream slot", e);
             }
+            blockedNanos += System.nanoTime() - blockStart;
 
             sleepTotalMillis += sleepMillis;
 
@@ -200,51 +238,113 @@ public class GRPCRemoteClient implements RemoteClient {
                     "Remote client [{}] block times over 60 seconds. Current streaming number {}",
                     address, concurrentStreamObserverNumber.get()
                 );
-                // Reset sleepTotalMillis to avoid too many warn logs.
                 sleepTotalMillis = 0;
             }
         }
+        metrics.addStreamBlockSeconds(blockedNanos / 1_000_000_000d);
+        startNanosHolder[0] = System.nanoTime();
 
-        final StreamObserver<RemoteMessage> remoteMessageStreamObserver
-            = getStub().withDeadlineAfter(remoteTimeout, TimeUnit.SECONDS)
-                       .call(new StreamObserver<Empty>() {
-                           @Override
-                           public void onNext(Empty empty) {
-                           }
+        // Acquire before call() so a fast completion cannot race ahead of the increment.
+        // close() may have zeroed the counter and unblocked the wait — refuse to re-inflate gauges.
+        if (!acquireStreamSlot()) {
+            throw new RemoteClientClosedException("Remote client closed before acquiring a stream slot");
+        }
+        streamAcquired.set(true);
+        try {
+            return getStub().withDeadlineAfter(remoteTimeout, TimeUnit.SECONDS)
+                            .call(new StreamObserver<Empty>() {
+                                @Override
+                                public void onNext(Empty empty) {
+                                }
 
-                           @Override
-                           public void onError(Throwable throwable) {
-                               concurrentStreamObserverNumber.addAndGet(-1);
-                               Status status = Status.fromThrowable(throwable);
-                               if (Status.CANCELLED.getCode() == status.getCode()) {
-                                   if (log.isDebugEnabled()) {
-                                       log.debug(throwable.getMessage(), throwable);
-                                   }
-                                   return;
-                               } else if (Status.RESOURCE_EXHAUSTED.getCode() == status.getCode()) {
-                                   if (System.currentTimeMillis() - lastRemoteResourceExhaustedTime > 120_000) {
-                                       // Only output the log every 120 seconds.
-                                       log.warn(throwable.getMessage(), throwable);
-                                       lastRemoteResourceExhaustedTime = System.currentTimeMillis();
-                                   }
-                                   return;
-                               }
-                               log.error(throwable.getMessage(), throwable);
-                           }
+                                @Override
+                                public void onError(Throwable throwable) {
+                                    endStream(streamFinished, startNanosHolder[0], messageCount, false);
+                                    Status status = Status.fromThrowable(throwable);
+                                    if (!closed && errorRecorded.compareAndSet(false, true)) {
+                                        metrics.recordError(RemoteClientMetrics.reasonOf(status));
+                                    }
+                                    if (closed) {
+                                        return;
+                                    }
+                                    if (Status.CANCELLED.getCode() == status.getCode()) {
+                                        if (log.isDebugEnabled()) {
+                                            log.debug(throwable.getMessage(), throwable);
+                                        }
+                                        return;
+                                    } else if (Status.RESOURCE_EXHAUSTED.getCode() == status.getCode()) {
+                                        if (System.currentTimeMillis() - lastRemoteResourceExhaustedTime > 120_000) {
+                                            log.warn(throwable.getMessage(), throwable);
+                                            lastRemoteResourceExhaustedTime = System.currentTimeMillis();
+                                        }
+                                        return;
+                                    }
+                                    log.error(throwable.getMessage(), throwable);
+                                }
 
-                           @Override
-                           public void onCompleted() {
-                               concurrentStreamObserverNumber.addAndGet(-1);
-                           }
-                       });
-        concurrentStreamObserverNumber.incrementAndGet();
-        return remoteMessageStreamObserver;
+                                @Override
+                                public void onCompleted() {
+                                    endStream(streamFinished, startNanosHolder[0], messageCount, true);
+                                }
+                            });
+        } catch (RuntimeException | Error t) {
+            endStream(streamFinished, startNanosHolder[0], messageCount, false);
+            throw t;
+        }
+    }
+
+    /**
+     * @return {@code false} when the client is already closed (do not bump inflight gauges)
+     */
+    private boolean acquireStreamSlot() {
+        synchronized (inflightLock) {
+            if (closed) {
+                return false;
+            }
+            final int inflight = concurrentStreamObserverNumber.incrementAndGet();
+            metrics.setStreamInflight(inflight);
+            return true;
+        }
+    }
+
+    private void publishQueueUsed() {
+        if (queue != null) {
+            metrics.setQueueUsedPercentage(queue.stats().totalUsedPercentage());
+        }
+    }
+
+    /** Release one inflight slot at most once; record latency only for successful streams. */
+    private void endStream(final AtomicBoolean streamFinished,
+                           final long startNanos,
+                           final int messageCount,
+                           final boolean observeLatency) {
+        if (!streamFinished.compareAndSet(false, true)) {
+            return;
+        }
+        synchronized (inflightLock) {
+            if (!closed) {
+                final int inflight = concurrentStreamObserverNumber.addAndGet(-1);
+                metrics.setStreamInflight(Math.max(0, inflight));
+            }
+        }
+        if (closed || !observeLatency) {
+            return;
+        }
+        // One observation per successful stream (batch RTT), not per message.
+        metrics.observeLatencySeconds((System.nanoTime() - startNanos) / 1_000_000_000d);
     }
 
     @Override
     public void close() {
+        // Drain while still open; closed-first would drop the final flush silently.
         if (queueName != null) {
             BatchQueueManager.shutdown(queueName);
+        }
+        // Ignore late gRPC callbacks after close.
+        synchronized (inflightLock) {
+            closed = true;
+            concurrentStreamObserverNumber.set(0);
+            metrics.clearPressureGauges();
         }
         if (Objects.nonNull(this.client)) {
             this.client.shutdown();
@@ -259,5 +359,19 @@ public class GRPCRemoteClient implements RemoteClient {
     @Override
     public int compareTo(RemoteClient o) {
         return address.compareTo(o.getAddress());
+    }
+
+    /** Stream-slot wait was interrupted; {@code reason=interrupted} already recorded. */
+    static final class RemoteStreamInterruptedException extends RuntimeException {
+        RemoteStreamInterruptedException(final String message, final Throwable cause) {
+            super(message, cause);
+        }
+    }
+
+    /** Client closed during stream wait/acquire; do not count as remote_out_error. */
+    static final class RemoteClientClosedException extends RuntimeException {
+        RemoteClientClosedException(final String message) {
+            super(message);
+        }
     }
 }

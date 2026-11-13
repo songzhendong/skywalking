@@ -55,6 +55,7 @@
   "ai-pipeline.default.uriRecognitionServerAddr": "",
   "ai-pipeline.default.uriRecognitionServerPort": "17128",
   "ai-pipeline.provider": "default",
+  "alarm.default.grpcTimeout": "10",
   "alarm.default.httpTimeout": "12",
   "alarm.provider": "default",
   "aws-firehose.default.acceptQueueSize": "0",
@@ -262,8 +263,9 @@
   "telemetry.provider": "prometheus",
   "trace-analyzer.default.dedupCapacity": "1000000",
   "trace-analyzer.default.dedupWindow": "0",
+  "trace-analyzer.default.nativeTalFiles": "native-rpc,native-endpoint-cross-thread,native-network-alias,native-segment,native-virtual-service,native-virtual-genai,native-ai-evaluation",
   "trace-analyzer.default.pairingSamplePercent": "25",
-  "trace-analyzer.default.talFiles": "otlp-general",
+  "trace-analyzer.default.talFiles": "otlp-general,otlp-ai-evaluation",
   "trace-analyzer.provider": "default",
   "ui-management.provider": "default"
 }
