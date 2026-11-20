@@ -870,6 +870,10 @@ jobs:
             config: test/e2e-v2/cases/airflow/mock/e2e.yaml
           - name: Airflow Cluster
             config: test/e2e-v2/cases/airflow/cluster/e2e.yaml
+          - name: DolphinScheduler
+            config: test/e2e-v2/cases/dolphinscheduler/mock/e2e.yaml
+          - name: DolphinScheduler Cluster
+            config: test/e2e-v2/cases/dolphinscheduler/cluster/e2e.yaml
 
           - name: OTLP Trace
             config: test/e2e-v2/cases/otlp-traces/e2e.yaml

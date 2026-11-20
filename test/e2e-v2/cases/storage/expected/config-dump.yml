@@ -212,7 +212,7 @@
   "receiver-log.provider": "default",
   "receiver-meter.provider": "default",
   "receiver-otel.default.enabledHandlers": "otlp-traces,otlp-metrics,otlp-logs",
-  "receiver-otel.default.enabledOtelMetricsRules": "apisix,nginx/*,k8s/*,istio-controlplane,vm,process-hostmetrics-linux,mysql/*,postgresql/*,oap,aws-eks/*,windows,process-hostmetrics-windows,aws-s3/*,aws-dynamodb/*,aws-gateway/*,redis/*,elasticsearch/*,rabbitmq/*,mongodb/*,kafka/*,pulsar/*,bookkeeper/*,rocketmq/*,clickhouse/*,activemq/*,kong/*,flink/*,airflow/*,banyandb/*,envoy-ai-gateway/*,ios/*,miniprogram/*,ai-agent/*",
+  "receiver-otel.default.enabledOtelMetricsRules": "apisix,nginx/*,k8s/*,istio-controlplane,vm,process-hostmetrics-linux,mysql/*,postgresql/*,oap,aws-eks/*,windows,process-hostmetrics-windows,aws-s3/*,aws-dynamodb/*,aws-gateway/*,redis/*,elasticsearch/*,rabbitmq/*,mongodb/*,kafka/*,pulsar/*,bookkeeper/*,rocketmq/*,clickhouse/*,activemq/*,kong/*,flink/*,airflow/*,dolphinscheduler/*,banyandb/*,envoy-ai-gateway/*,ios/*,miniprogram/*,ai-agent/*",
   "receiver-otel.default.otlpLogSearchableTags": "level,severity,ai_route_type",
   "receiver-otel.default.otlpServiceGroupKeys": "",
   "receiver-otel.default.otlpTraceMaxSpansPerSecond": "0",

@@ -342,6 +342,11 @@ public final class Layer {
      */
     public static final Layer OTLP_VIRTUAL_GATEWAY = register("OTLP_VIRTUAL_GATEWAY", 57, false);
 
+    /**
+     * Apache DolphinScheduler workflow orchestration (Prometheus metrics scraped by an OpenTelemetry Collector).
+     */
+    public static final Layer DOLPHINSCHEDULER = register("DOLPHINSCHEDULER", 58, true);
+
     private final String name;
     private final int value;
     /**
