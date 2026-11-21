@@ -236,7 +236,7 @@ expected:
       - labels:
           cluster: 'dolphinscheduler::ds-cluster'
           host_name: ds-master-1
-          le: '+Inf'
+          le: '9223372036854775807'
         value: 3.0
   meter_dolphinscheduler_instance_rpc_client_sync_request_exception_count:
     entities:
@@ -269,7 +269,7 @@ expected:
       - labels:
           cluster: 'dolphinscheduler::ds-cluster'
           host_name: ds-master-1
-          le: '+Inf'
+          le: '9223372036854775807'
         value: 4.5
   meter_dolphinscheduler_instance_worker_overload_count:
     entities:
@@ -407,7 +407,7 @@ expected:
       - labels:
           cluster: 'dolphinscheduler::ds-cluster'
           host_name: ds-api-1
-          le: '+Inf'
+          le: '9223372036854775807'
         value: 50.0
   meter_dolphinscheduler_instance_alert_send_count:
     entities:

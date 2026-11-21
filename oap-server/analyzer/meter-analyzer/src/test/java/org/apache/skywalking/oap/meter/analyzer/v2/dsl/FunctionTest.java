@@ -88,6 +88,21 @@ public class FunctionTest {
                 false,
             },
             {
+                "histogram-prometheus-inf",
+                of("http_success_request", SampleFamilyBuilder.newBuilder(
+                    Sample.builder().labels(of("le", "0.025")).value(100).name("http_success_request").build(),
+                    Sample.builder().labels(of("le", "1.25")).value(36).name("http_success_request").build(),
+                    Sample.builder().labels(of("le", "+Inf")).value(40).name("http_success_request").build()).build()
+                ),
+                "http_success_request.histogram()",
+                Result.success(SampleFamilyBuilder.newBuilder(
+                    Sample.builder().labels(of("le", "25")).value(100).name("http_success_request").build(),
+                    Sample.builder().labels(of("le", "1250")).value(36).name("http_success_request").build(),
+                    Sample.builder().labels(of("le", String.valueOf(Long.MAX_VALUE))).value(40).name("http_success_request").build()).build()
+                ),
+                false,
+            },
+            {
                 "histogram_percentile",
                 of("http_success_request", SampleFamilyBuilder.newBuilder(
                     Sample.builder().labels(of("le", "0.025")).value(100).name("http_success_request").build(),

@@ -107,7 +107,7 @@ services:
       - e2e
 
   ds-schema-initializer:
-    image: ${DS_HUB:-ghcr.io/apache/dolphinscheduler}/dolphinscheduler-tools:${DS_TAG:-3.2.2}
+    image: ${DS_HUB:-apache}/dolphinscheduler-tools:${DS_TAG:-3.2.2}
     environment:
       <<: *ds-env
     command: ["tools/bin/upgrade-schema.sh"]
@@ -120,7 +120,7 @@ services:
       - e2e
 
   ds-master:
-    image: ${DS_HUB:-ghcr.io/apache/dolphinscheduler}/dolphinscheduler-master:${DS_TAG:-3.2.2}
+    image: ${DS_HUB:-apache}/dolphinscheduler-master:${DS_TAG:-3.2.2}
     environment:
       <<: *ds-env
     healthcheck:
@@ -140,7 +140,7 @@ services:
       - e2e
 
   ds-worker:
-    image: ${DS_HUB:-ghcr.io/apache/dolphinscheduler}/dolphinscheduler-worker:${DS_TAG:-3.2.2}
+    image: ${DS_HUB:-apache}/dolphinscheduler-worker:${DS_TAG:-3.2.2}
     environment:
       <<: *ds-env
     healthcheck:
@@ -161,7 +161,7 @@ services:
       - e2e
 
   ds-api:
-    image: ${DS_HUB:-ghcr.io/apache/dolphinscheduler}/dolphinscheduler-api:${DS_TAG:-3.2.2}
+    image: ${DS_HUB:-apache}/dolphinscheduler-api:${DS_TAG:-3.2.2}
     environment:
       <<: *ds-env
     healthcheck:
@@ -181,7 +181,7 @@ services:
       - e2e
 
   ds-alert:
-    image: ${DS_HUB:-ghcr.io/apache/dolphinscheduler}/dolphinscheduler-alert-server:${DS_TAG:-3.2.2}
+    image: ${DS_HUB:-apache}/dolphinscheduler-alert-server:${DS_TAG:-3.2.2}
     environment:
       <<: *ds-env
     healthcheck:

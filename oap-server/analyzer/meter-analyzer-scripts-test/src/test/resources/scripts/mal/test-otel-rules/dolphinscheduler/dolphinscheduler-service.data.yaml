@@ -233,7 +233,7 @@ expected:
         value: 10.0
       - labels:
           cluster: 'dolphinscheduler::ds-cluster'
-          le: '+Inf'
+          le: '9223372036854775807'
         value: 12.5
   meter_dolphinscheduler_workflow_create_command_count:
     entities:
