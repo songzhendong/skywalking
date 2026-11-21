@@ -1,0 +1,86 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+receivers:
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: dolphinscheduler-master
+          scrape_interval: 15s
+          metrics_path: /actuator/prometheus
+          static_configs:
+            - targets: ['ds-master:5679']
+              labels:
+                cluster: ds-e2e-cluster
+                host_name: ds-master-1
+          metric_relabel_configs:
+            - source_labels: []
+              target_label: job_name
+              replacement: dolphinscheduler-monitoring
+        - job_name: dolphinscheduler-worker
+          scrape_interval: 15s
+          metrics_path: /actuator/prometheus
+          static_configs:
+            - targets: ['ds-worker:1235']
+              labels:
+                cluster: ds-e2e-cluster
+                host_name: ds-worker-1
+          metric_relabel_configs:
+            - source_labels: []
+              target_label: job_name
+              replacement: dolphinscheduler-monitoring
+        - job_name: dolphinscheduler-api
+          scrape_interval: 15s
+          metrics_path: /dolphinscheduler/actuator/prometheus
+          static_configs:
+            - targets: ['ds-api:12345']
+              labels:
+                cluster: ds-e2e-cluster
+                host_name: ds-api-1
+          metric_relabel_configs:
+            - source_labels: []
+              target_label: job_name
+              replacement: dolphinscheduler-monitoring
+        - job_name: dolphinscheduler-alert
+          scrape_interval: 15s
+          metrics_path: /actuator/prometheus
+          static_configs:
+            - targets: ['ds-alert:50053']
+              labels:
+                cluster: ds-e2e-cluster
+                host_name: ds-alert-1
+          metric_relabel_configs:
+            - source_labels: []
+              target_label: job_name
+              replacement: dolphinscheduler-monitoring
+
+exporters:
+  otlp:
+    endpoint: oap:11800
+    tls:
+      insecure: true
+
+processors:
+  batch:
+
+service:
+  pipelines:
+    metrics:
+      receivers:
+        - prometheus
+      processors:
+        - batch
+      exporters:
+        - otlp

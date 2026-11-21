@@ -1,0 +1,439 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+script: oap-server/server-starter/src/main/resources/otel-rules/dolphinscheduler/dolphinscheduler-instance.yaml
+input:
+  ds_master_overload_count_total:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-master-1
+      value: 2.0
+  ds_master_consume_command_count_total:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-master-1
+      value: 40.0
+  ds_master_scheduler_failover_check_count_total:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-master-1
+      value: 6.0
+  ds_master_scheduler_failover_check_time_seconds:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-master-1
+        le: '0.1'
+      value: 2.0
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-master-1
+        le: '1'
+      value: 4.0
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-master-1
+        le: '+Inf'
+      value: 6.0
+  ds_rpc_client_sync_request_exception_count_total:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-master-1
+      value: 1.0
+  ds_rpc_client_sync_request_duration_time_seconds:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-master-1
+        le: '0.05'
+      value: 3.0
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-master-1
+        le: '0.5'
+      value: 6.0
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-master-1
+        le: '+Inf'
+      value: 9.0
+  ds_worker_overload_count_total:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-worker-1
+      value: 1.0
+  ds_worker_task:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-worker-1
+      value: 5.0
+  ds_worker_execute_queue_size:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-worker-1
+      value: 2.0
+  ds_worker_active_execute_thread:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-worker-1
+      value: 3.0
+  ds_worker_cpu_usage:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-worker-1
+      value: 0.42
+  ds_worker_memory_usage:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-worker-1
+      value: 0.55
+  ds_worker_memory_available:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-worker-1
+      value: 8.5
+  ds_worker_full_submit_queue_count_total:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-worker-1
+      value: 2.0
+  ds_api_request_count_total:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-api-1
+      value: 100.0
+  ds_api_response_count_total:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-api-1
+        code: '2xx'
+      value: 90.0
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-api-1
+        code: '5xx'
+      value: 10.0
+  ds_api_response_time_seconds:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-api-1
+        le: '0.1'
+      value: 40.0
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-api-1
+        le: '1'
+      value: 80.0
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-api-1
+        le: '+Inf'
+      value: 100.0
+  ds_alert_send_count_total:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-alert-1
+        status: success
+      value: 12.0
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-alert-1
+        status: fail
+      value: 2.0
+  ds_alert_pending:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-alert-1
+      value: 1.0
+expected:
+  meter_dolphinscheduler_instance_master_overload_count:
+    entities:
+      - scope: SERVICE_INSTANCE
+        service: 'dolphinscheduler::ds-cluster'
+        instance: ds-master-1
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          host_name: ds-master-1
+        value: 1.0
+  meter_dolphinscheduler_instance_master_consume_command_count:
+    entities:
+      - scope: SERVICE_INSTANCE
+        service: 'dolphinscheduler::ds-cluster'
+        instance: ds-master-1
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          host_name: ds-master-1
+        value: 20.0
+  meter_dolphinscheduler_instance_master_scheduler_failover_check_count:
+    entities:
+      - scope: SERVICE_INSTANCE
+        service: 'dolphinscheduler::ds-cluster'
+        instance: ds-master-1
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          host_name: ds-master-1
+        value: 3.0
+  meter_dolphinscheduler_instance_master_scheduler_failover_check_time_percentile:
+    entities:
+      - scope: SERVICE_INSTANCE
+        service: 'dolphinscheduler::ds-cluster'
+        instance: ds-master-1
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          host_name: ds-master-1
+          le: '100'
+        value: 1.0
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          host_name: ds-master-1
+          le: '1000'
+        value: 2.0
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          host_name: ds-master-1
+          le: '+Inf'
+        value: 3.0
+  meter_dolphinscheduler_instance_rpc_client_sync_request_exception_count:
+    entities:
+      - scope: SERVICE_INSTANCE
+        service: 'dolphinscheduler::ds-cluster'
+        instance: ds-master-1
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          host_name: ds-master-1
+        value: 0.5
+  meter_dolphinscheduler_instance_rpc_client_sync_request_duration_percentile:
+    entities:
+      - scope: SERVICE_INSTANCE
+        service: 'dolphinscheduler::ds-cluster'
+        instance: ds-master-1
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          host_name: ds-master-1
+          le: '50'
+        value: 1.5
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          host_name: ds-master-1
+          le: '500'
+        value: 3.0
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          host_name: ds-master-1
+          le: '+Inf'
+        value: 4.5
+  meter_dolphinscheduler_instance_worker_overload_count:
+    entities:
+      - scope: SERVICE_INSTANCE
+        service: 'dolphinscheduler::ds-cluster'
+        instance: ds-worker-1
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          host_name: ds-worker-1
+        value: 0.5
+  meter_dolphinscheduler_instance_worker_task:
+    entities:
+      - scope: SERVICE_INSTANCE
+        service: 'dolphinscheduler::ds-cluster'
+        instance: ds-worker-1
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          host_name: ds-worker-1
+        value: 5.0
+  meter_dolphinscheduler_instance_worker_execute_queue_size:
+    entities:
+      - scope: SERVICE_INSTANCE
+        service: 'dolphinscheduler::ds-cluster'
+        instance: ds-worker-1
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          host_name: ds-worker-1
+        value: 2.0
+  meter_dolphinscheduler_instance_worker_active_execute_thread:
+    entities:
+      - scope: SERVICE_INSTANCE
+        service: 'dolphinscheduler::ds-cluster'
+        instance: ds-worker-1
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          host_name: ds-worker-1
+        value: 3.0
+  meter_dolphinscheduler_instance_worker_cpu_usage:
+    entities:
+      - scope: SERVICE_INSTANCE
+        service: 'dolphinscheduler::ds-cluster'
+        instance: ds-worker-1
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          host_name: ds-worker-1
+        value: 42.0
+  meter_dolphinscheduler_instance_worker_memory_usage:
+    entities:
+      - scope: SERVICE_INSTANCE
+        service: 'dolphinscheduler::ds-cluster'
+        instance: ds-worker-1
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          host_name: ds-worker-1
+        value: 55.0
+  meter_dolphinscheduler_instance_worker_memory_available:
+    entities:
+      - scope: SERVICE_INSTANCE
+        service: 'dolphinscheduler::ds-cluster'
+        instance: ds-worker-1
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          host_name: ds-worker-1
+        value: 850.0
+  meter_dolphinscheduler_instance_worker_full_submit_queue_count:
+    entities:
+      - scope: SERVICE_INSTANCE
+        service: 'dolphinscheduler::ds-cluster'
+        instance: ds-worker-1
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          host_name: ds-worker-1
+        value: 1.0
+  meter_dolphinscheduler_instance_api_request_count:
+    entities:
+      - scope: SERVICE_INSTANCE
+        service: 'dolphinscheduler::ds-cluster'
+        instance: ds-api-1
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          host_name: ds-api-1
+        value: 50.0
+  meter_dolphinscheduler_instance_api_response_count:
+    entities:
+      - scope: SERVICE_INSTANCE
+        service: 'dolphinscheduler::ds-cluster'
+        instance: ds-api-1
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          host_name: ds-api-1
+          code: '2xx'
+        value: 45.0
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          host_name: ds-api-1
+          code: '5xx'
+        value: 5.0
+  meter_dolphinscheduler_instance_api_response_time_percentile:
+    entities:
+      - scope: SERVICE_INSTANCE
+        service: 'dolphinscheduler::ds-cluster'
+        instance: ds-api-1
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          host_name: ds-api-1
+          le: '100'
+        value: 20.0
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          host_name: ds-api-1
+          le: '1000'
+        value: 40.0
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          host_name: ds-api-1
+          le: '+Inf'
+        value: 50.0
+  meter_dolphinscheduler_instance_alert_send_count:
+    entities:
+      - scope: SERVICE_INSTANCE
+        service: 'dolphinscheduler::ds-cluster'
+        instance: ds-alert-1
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          host_name: ds-alert-1
+          status: success
+        value: 6.0
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          host_name: ds-alert-1
+          status: fail
+        value: 1.0
+  meter_dolphinscheduler_instance_alert_pending:
+    entities:
+      - scope: SERVICE_INSTANCE
+        service: 'dolphinscheduler::ds-cluster'
+        instance: ds-alert-1
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          host_name: ds-alert-1
+        value: 1.0

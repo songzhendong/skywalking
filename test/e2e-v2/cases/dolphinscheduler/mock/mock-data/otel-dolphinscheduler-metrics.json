@@ -1,0 +1,744 @@
+{
+  "resourceMetrics": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "dolphinscheduler-monitoring"
+            }
+          },
+          {
+            "key": "cluster",
+            "value": {
+              "stringValue": "ds-cluster"
+            }
+          },
+          {
+            "key": "host.name",
+            "value": {
+              "stringValue": "ds-master-1"
+            }
+          }
+        ]
+      },
+      "scopeMetrics": [
+        {
+          "scope": {},
+          "metrics": [
+            {
+              "name": "ds_master_overload_count_total",
+              "sum": {
+                "aggregationTemporality": 2,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "startTimeUnixNano": "1676140244999000000",
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 2.0
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ds_master_consume_command_count_total",
+              "sum": {
+                "aggregationTemporality": 2,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "startTimeUnixNano": "1676140244999000000",
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 40.0
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ds_master_scheduler_failover_check_count_total",
+              "sum": {
+                "aggregationTemporality": 2,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "startTimeUnixNano": "1676140244999000000",
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 6.0
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ds_master_scheduler_failover_check_time_seconds",
+              "gauge": {
+                "dataPoints": [
+                  {
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 2.0,
+                    "attributes": [
+                      {
+                        "key": "le",
+                        "value": {
+                          "stringValue": "0.1"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 4.0,
+                    "attributes": [
+                      {
+                        "key": "le",
+                        "value": {
+                          "stringValue": "1"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 6.0,
+                    "attributes": [
+                      {
+                        "key": "le",
+                        "value": {
+                          "stringValue": "+Inf"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ds_rpc_client_sync_request_exception_count_total",
+              "sum": {
+                "aggregationTemporality": 2,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "startTimeUnixNano": "1676140244999000000",
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 1.0
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ds_rpc_client_sync_request_duration_time_seconds",
+              "gauge": {
+                "dataPoints": [
+                  {
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 3.0,
+                    "attributes": [
+                      {
+                        "key": "le",
+                        "value": {
+                          "stringValue": "0.05"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 6.0,
+                    "attributes": [
+                      {
+                        "key": "le",
+                        "value": {
+                          "stringValue": "0.5"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 9.0,
+                    "attributes": [
+                      {
+                        "key": "le",
+                        "value": {
+                          "stringValue": "+Inf"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ds_workflow_instance_running",
+              "gauge": {
+                "dataPoints": [
+                  {
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 4.0
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ds_task_prepared",
+              "gauge": {
+                "dataPoints": [
+                  {
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 7.0
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ds_task_instance_count_total",
+              "sum": {
+                "aggregationTemporality": 2,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "startTimeUnixNano": "1676140244999000000",
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 20.0,
+                    "attributes": [
+                      {
+                        "key": "state",
+                        "value": {
+                          "stringValue": "success"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "startTimeUnixNano": "1676140244999000000",
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 4.0,
+                    "attributes": [
+                      {
+                        "key": "state",
+                        "value": {
+                          "stringValue": "fail"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "startTimeUnixNano": "1676140244999000000",
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 2.0,
+                    "attributes": [
+                      {
+                        "key": "state",
+                        "value": {
+                          "stringValue": "timeout"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ds_workflow_instance_count_total",
+              "sum": {
+                "aggregationTemporality": 2,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "startTimeUnixNano": "1676140244999000000",
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 10.0,
+                    "attributes": [
+                      {
+                        "key": "state",
+                        "value": {
+                          "stringValue": "success"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "startTimeUnixNano": "1676140244999000000",
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 1.0,
+                    "attributes": [
+                      {
+                        "key": "state",
+                        "value": {
+                          "stringValue": "fail"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ds_task_dispatch_count_total",
+              "sum": {
+                "aggregationTemporality": 2,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "startTimeUnixNano": "1676140244999000000",
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 30.0
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ds_task_dispatch_failure_count_total",
+              "sum": {
+                "aggregationTemporality": 2,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "startTimeUnixNano": "1676140244999000000",
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 2.0
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ds_task_dispatch_error_count_total",
+              "sum": {
+                "aggregationTemporality": 2,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "startTimeUnixNano": "1676140244999000000",
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 1.0
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ds_task_execution_duration_seconds",
+              "gauge": {
+                "dataPoints": [
+                  {
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 5.0,
+                    "attributes": [
+                      {
+                        "key": "le",
+                        "value": {
+                          "stringValue": "1"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 10.0,
+                    "attributes": [
+                      {
+                        "key": "le",
+                        "value": {
+                          "stringValue": "5"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 15.0,
+                    "attributes": [
+                      {
+                        "key": "le",
+                        "value": {
+                          "stringValue": "30"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 20.0,
+                    "attributes": [
+                      {
+                        "key": "le",
+                        "value": {
+                          "stringValue": "60"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 25.0,
+                    "attributes": [
+                      {
+                        "key": "le",
+                        "value": {
+                          "stringValue": "+Inf"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ds_workflow_create_command_count_total",
+              "sum": {
+                "aggregationTemporality": 2,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "startTimeUnixNano": "1676140244999000000",
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 8.0
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ds_workflow_instance_submit_count_total",
+              "sum": {
+                "aggregationTemporality": 2,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "startTimeUnixNano": "1676140244999000000",
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 6.0
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "dolphinscheduler-monitoring"
+            }
+          },
+          {
+            "key": "cluster",
+            "value": {
+              "stringValue": "ds-cluster"
+            }
+          },
+          {
+            "key": "host.name",
+            "value": {
+              "stringValue": "ds-worker-1"
+            }
+          }
+        ]
+      },
+      "scopeMetrics": [
+        {
+          "scope": {},
+          "metrics": [
+            {
+              "name": "ds_worker_overload_count_total",
+              "sum": {
+                "aggregationTemporality": 2,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "startTimeUnixNano": "1676140244999000000",
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 1.0
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ds_worker_task",
+              "gauge": {
+                "dataPoints": [
+                  {
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 5.0
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ds_worker_execute_queue_size",
+              "gauge": {
+                "dataPoints": [
+                  {
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 2.0
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ds_worker_active_execute_thread",
+              "gauge": {
+                "dataPoints": [
+                  {
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 3.0
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ds_worker_cpu_usage",
+              "gauge": {
+                "dataPoints": [
+                  {
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 0.42
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ds_worker_memory_usage",
+              "gauge": {
+                "dataPoints": [
+                  {
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 0.55
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ds_worker_memory_available",
+              "gauge": {
+                "dataPoints": [
+                  {
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 8.5
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ds_worker_full_submit_queue_count_total",
+              "sum": {
+                "aggregationTemporality": 2,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "startTimeUnixNano": "1676140244999000000",
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 2.0
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "dolphinscheduler-monitoring"
+            }
+          },
+          {
+            "key": "cluster",
+            "value": {
+              "stringValue": "ds-cluster"
+            }
+          },
+          {
+            "key": "host.name",
+            "value": {
+              "stringValue": "ds-api-1"
+            }
+          }
+        ]
+      },
+      "scopeMetrics": [
+        {
+          "scope": {},
+          "metrics": [
+            {
+              "name": "ds_api_request_count_total",
+              "sum": {
+                "aggregationTemporality": 2,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "startTimeUnixNano": "1676140244999000000",
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 100.0
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ds_api_response_count_total",
+              "sum": {
+                "aggregationTemporality": 2,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "startTimeUnixNano": "1676140244999000000",
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 90.0,
+                    "attributes": [
+                      {
+                        "key": "code",
+                        "value": {
+                          "stringValue": "2xx"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "startTimeUnixNano": "1676140244999000000",
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 10.0,
+                    "attributes": [
+                      {
+                        "key": "code",
+                        "value": {
+                          "stringValue": "5xx"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ds_api_response_time_seconds",
+              "gauge": {
+                "dataPoints": [
+                  {
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 40.0,
+                    "attributes": [
+                      {
+                        "key": "le",
+                        "value": {
+                          "stringValue": "0.1"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 80.0,
+                    "attributes": [
+                      {
+                        "key": "le",
+                        "value": {
+                          "stringValue": "1"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 100.0,
+                    "attributes": [
+                      {
+                        "key": "le",
+                        "value": {
+                          "stringValue": "+Inf"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "dolphinscheduler-monitoring"
+            }
+          },
+          {
+            "key": "cluster",
+            "value": {
+              "stringValue": "ds-cluster"
+            }
+          },
+          {
+            "key": "host.name",
+            "value": {
+              "stringValue": "ds-alert-1"
+            }
+          }
+        ]
+      },
+      "scopeMetrics": [
+        {
+          "scope": {},
+          "metrics": [
+            {
+              "name": "ds_alert_send_count_total",
+              "sum": {
+                "aggregationTemporality": 2,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "startTimeUnixNano": "1676140244999000000",
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 12.0,
+                    "attributes": [
+                      {
+                        "key": "status",
+                        "value": {
+                          "stringValue": "success"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "startTimeUnixNano": "1676140244999000000",
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 2.0,
+                    "attributes": [
+                      {
+                        "key": "status",
+                        "value": {
+                          "stringValue": "fail"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ds_alert_pending",
+              "gauge": {
+                "dataPoints": [
+                  {
+                    "timeUnixNano": "1676140375004000000",
+                    "asDouble": 1.0
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

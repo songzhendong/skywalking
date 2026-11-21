@@ -156,6 +156,8 @@ catalog:
             catalog:
               - name: "Airflow"
                 path: "/en/setup/backend/backend-airflow-monitoring"
+              - name: "DolphinScheduler"
+                path: "/en/setup/backend/backend-dolphinscheduler-monitoring"
           - name: "Data Processing Engine"
             catalog:
               - name: "Flink"

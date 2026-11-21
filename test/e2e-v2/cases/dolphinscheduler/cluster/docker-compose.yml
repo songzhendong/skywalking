@@ -1,0 +1,208 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Real DolphinScheduler cluster e2e (Master + Worker + API + Alert).
+# Prometheus scrape -> OTel Collector -> OAP (BanyanDB). Pair with cluster/e2e.yaml.
+
+x-ds-env: &ds-env
+  TZ: Asia/Shanghai
+  DATABASE: postgresql
+  SPRING_PROFILES_ACTIVE: postgresql
+  SPRING_JACKSON_TIME_ZONE: UTC
+  SPRING_DATASOURCE_URL: jdbc:postgresql://ds-postgresql:5432/dolphinscheduler
+  SPRING_DATASOURCE_USERNAME: root
+  SPRING_DATASOURCE_PASSWORD: root
+  REGISTRY_ZOOKEEPER_CONNECT_STRING: ds-zookeeper:2181
+  METRICS_ENABLED: "true"
+  # Keep actuator/metrics up on memory-constrained e2e hosts (default image heap is 4g).
+  JAVA_OPTS: "-Xms512m -Xmx1g -XX:+ExitOnOutOfMemoryError"
+  MASTER_MAX_SYSTEM_MEMORY_USAGE_PERCENTAGE_THRESHOLDS: "0.95"
+  WORKER_MAX_SYSTEM_MEMORY_USAGE_PERCENTAGE_THRESHOLDS: "0.95"
+  MASTER_MAX_SYSTEM_CPU_USAGE_PERCENTAGE_THRESHOLDS: "0.95"
+  WORKER_MAX_SYSTEM_CPU_USAGE_PERCENTAGE_THRESHOLDS: "0.95"
+
+services:
+  oap:
+    extends:
+      file: ../../../script/docker-compose/base-compose.yml
+      service: oap
+    ports:
+      - 12800
+    environment:
+      SW_OTEL_RECEIVER_ENABLED_OTEL_METRICS_RULES: "dolphinscheduler/*"
+    networks:
+      - e2e
+    depends_on:
+      banyandb:
+        condition: service_healthy
+
+  banyandb:
+    extends:
+      file: ../../../script/docker-compose/base-compose.yml
+      service: banyandb
+    ports:
+      - 17912
+    networks:
+      e2e:
+        aliases:
+          - banyandb
+
+  otel-collector:
+    image: otel/opentelemetry-collector:${OTEL_COLLECTOR_VERSION}
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    depends_on:
+      oap:
+        condition: service_healthy
+      ds-master:
+        condition: service_healthy
+      ds-worker:
+        condition: service_healthy
+      ds-api:
+        condition: service_healthy
+      ds-alert:
+        condition: service_healthy
+    networks:
+      - e2e
+
+  ds-postgresql:
+    image: postgres:15.6-alpine
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: dolphinscheduler
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d dolphinscheduler"]
+      interval: 5s
+      timeout: 10s
+      retries: 60
+    networks:
+      - e2e
+
+  ds-zookeeper:
+    image: zookeeper:3.8.4
+    environment:
+      ALLOW_ANONYMOUS_LOGIN: "yes"
+      ZOO_4LW_COMMANDS_WHITELIST: srvr,ruok,wchs,cons
+    healthcheck:
+      # Avoid nc (not always present); TCP open on the ZK client port is enough.
+      test: ["CMD-SHELL", "bash -c 'cat < /dev/null > /dev/tcp/127.0.0.1/2181'"]
+      interval: 5s
+      timeout: 10s
+      retries: 60
+    networks:
+      - e2e
+
+  ds-schema-initializer:
+    image: ${DS_HUB:-ghcr.io/apache/dolphinscheduler}/dolphinscheduler-tools:${DS_TAG:-3.2.2}
+    environment:
+      <<: *ds-env
+    command: ["tools/bin/upgrade-schema.sh"]
+    depends_on:
+      ds-postgresql:
+        condition: service_healthy
+    volumes:
+      - ds-logs:/opt/dolphinscheduler/logs
+    networks:
+      - e2e
+
+  ds-master:
+    image: ${DS_HUB:-ghcr.io/apache/dolphinscheduler}/dolphinscheduler-master:${DS_TAG:-3.2.2}
+    environment:
+      <<: *ds-env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5679/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 40
+      start_period: 60s
+    depends_on:
+      ds-zookeeper:
+        condition: service_healthy
+      ds-schema-initializer:
+        condition: service_completed_successfully
+    volumes:
+      - ds-logs:/opt/dolphinscheduler/logs
+    networks:
+      - e2e
+
+  ds-worker:
+    image: ${DS_HUB:-ghcr.io/apache/dolphinscheduler}/dolphinscheduler-worker:${DS_TAG:-3.2.2}
+    environment:
+      <<: *ds-env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:1235/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 40
+      start_period: 60s
+    depends_on:
+      ds-zookeeper:
+        condition: service_healthy
+      ds-schema-initializer:
+        condition: service_completed_successfully
+    volumes:
+      - ds-logs:/opt/dolphinscheduler/logs
+      - ds-worker-data:/tmp/dolphinscheduler
+    networks:
+      - e2e
+
+  ds-api:
+    image: ${DS_HUB:-ghcr.io/apache/dolphinscheduler}/dolphinscheduler-api:${DS_TAG:-3.2.2}
+    environment:
+      <<: *ds-env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:12345/dolphinscheduler/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 40
+      start_period: 60s
+    depends_on:
+      ds-zookeeper:
+        condition: service_healthy
+      ds-schema-initializer:
+        condition: service_completed_successfully
+    volumes:
+      - ds-logs:/opt/dolphinscheduler/logs
+    networks:
+      - e2e
+
+  ds-alert:
+    image: ${DS_HUB:-ghcr.io/apache/dolphinscheduler}/dolphinscheduler-alert-server:${DS_TAG:-3.2.2}
+    environment:
+      <<: *ds-env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:50053/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 40
+      start_period: 60s
+    depends_on:
+      ds-zookeeper:
+        condition: service_healthy
+      ds-schema-initializer:
+        condition: service_completed_successfully
+    volumes:
+      - ds-logs:/opt/dolphinscheduler/logs
+    networks:
+      - e2e
+
+volumes:
+  ds-logs:
+  ds-worker-data:
+
+networks:
+  e2e:
