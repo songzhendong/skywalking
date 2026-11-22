@@ -31,7 +31,7 @@ CI builds OAP with `make docker.all` then runs the same configs via
 
 ## Mock suite (`mock/`)
 
-Replays synthetic OTLP JSON — full **33**-meter contract (2 entity + 33 metrics).
+Replays synthetic OTLP JSON — **35** checks covering the full **33**-meter contract (2 entity + 33 meters).
 
 | File | Role |
 |------|------|
@@ -51,7 +51,7 @@ Collector scrapes `/actuator/prometheus` (API under `/dolphinscheduler/...`) and
 | [`docker-compose.yml`](cluster/docker-compose.yml) | DS stack + Collector + OAP |
 | [`otel-collector-config.yaml`](cluster/otel-collector-config.yaml) | Prometheus scrape + `job_name` |
 | [`setup.sh`](cluster/setup.sh) | Wait for Prometheus + light API traffic |
-| [`dolphinscheduler-cases.yaml`](cluster/dolphinscheduler-cases.yaml) | Smoke checks (13) |
+| [`dolphinscheduler-cases.yaml`](cluster/dolphinscheduler-cases.yaml) | Smoke checks (12) |
 
 ### Coverage split
 
