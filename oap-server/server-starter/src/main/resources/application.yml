@@ -123,7 +123,7 @@ core:
     searchableTracesTags: ${SW_SEARCHABLE_TAG_KEYS:http.method,http.status_code,rpc.status_code,db.type,db.instance,mq.queue,mq.topic,mq.broker}
     # Define the set of log tag keys, which should be searchable through the GraphQL.
     # The max length of key=value should be less than 256 or will be dropped.
-    searchableLogsTags: ${SW_SEARCHABLE_LOGS_TAG_KEYS:level,http.status_code,ai_route_type}
+    searchableLogsTags: ${SW_SEARCHABLE_LOGS_TAG_KEYS:level,http.status_code}
     # Define the set of alarm tag keys, which should be searchable through the GraphQL.
     # The max length of key=value should be less than 256 or will be dropped.
     searchableAlarmTags: ${SW_SEARCHABLE_ALARM_TAG_KEYS:level}
@@ -498,6 +498,12 @@ receiver-otel:
     # `cart` still reaches `shop::cart`. Use an attribute that holds one low-cardinality value per service, such as
     # `service.namespace`, `deployment.environment.name` or `k8s.namespace.name`. Empty, the default, groups nothing.
     otlpServiceGroupKeys: ${SW_OTEL_RECEIVER_OTLP_SERVICE_GROUP:""}
+    # `otlp-logs` only. Tag keys, comma separated, indexed as searchable on OTLP logs, in place of core's
+    # `searchableLogsTags`, which the SkyWalking native logs keep. A key is a log record attribute, the `severity` and
+    # `level` tags the receiver adds from the record's severity number, or a tag a LAL rule adds. List low-cardinality
+    # keys only: every distinct value is stored for tag autocomplete. Empty uses core's `searchableLogsTags`.
+    # The max length of key=value should be less than 256 or will be dropped.
+    otlpLogSearchableTags: ${SW_OTEL_LOG_SEARCHABLE_TAG_KEYS:level,severity,ai_route_type}
     # `otlp` mode only. Attribute keys offered by tag autocomplete (TraceQL /api/v2/search/tags), each written with its
     # TraceQL scope, `resource.<key>` or `span.<key>`; an entry without a scope fails the boot. List low-cardinality
     # attributes only: every distinct value is stored once per day. Every resource and span attribute is indexed for
@@ -508,7 +514,7 @@ receiver-otel:
     otlpTraceSampleRate: ${SW_OTEL_TRACE_SAMPLE_RATE:10000}
     # `otlp` mode only. Spans per second accepted before dropping. 0 means no limit.
     otlpTraceMaxSpansPerSecond: ${SW_OTEL_TRACE_MAX_SPANS_PER_SECOND:0}
-    enabledOtelMetricsRules: ${SW_OTEL_RECEIVER_ENABLED_OTEL_METRICS_RULES:"apisix,nginx/*,k8s/*,istio-controlplane,vm,process-hostmetrics-linux,mysql/*,postgresql/*,oap,aws-eks/*,windows,process-hostmetrics-windows,aws-s3/*,aws-dynamodb/*,aws-gateway/*,redis/*,elasticsearch/*,rabbitmq/*,mongodb/*,kafka/*,pulsar/*,bookkeeper/*,rocketmq/*,clickhouse/*,activemq/*,kong/*,flink/*,airflow/*,banyandb/*,envoy-ai-gateway/*,ios/*,miniprogram/*,ai-agent/*"}
+    enabledOtelMetricsRules: ${SW_OTEL_RECEIVER_ENABLED_OTEL_METRICS_RULES:"apisix,nginx/*,k8s/*,istio-controlplane,vm,process-hostmetrics-linux,mysql/*,postgresql/*,oap,aws-eks/*,windows,process-hostmetrics-windows,aws-s3/*,aws-dynamodb/*,aws-gateway/*,redis/*,elasticsearch/*,rabbitmq/*,mongodb/*,kafka/*,pulsar/*,bookkeeper/*,rocketmq/*,clickhouse/*,activemq/*,kong/*,flink/*,airflow/*,dolphinscheduler/*,banyandb/*,envoy-ai-gateway/*,ios/*,miniprogram/*,ai-agent/*"}
 
 receiver-zipkin:
   selector: ${SW_RECEIVER_ZIPKIN:-}
@@ -715,7 +721,7 @@ configuration:
     namespace: ${SW_CONFIG_ETCD_NAMESPACE:/skywalking}
     authentication: ${SW_CONFIG_ETCD_AUTHENTICATION:false}
     user: ${SW_CONFIG_ETCD_USER:}
-    password: ${SW_CONFIG_ETCD_password:}
+    password: ${SW_CONFIG_ETCD_PASSWORD:}
   consul:
     # Consul host and ports, separated by comma, e.g. 1.2.3.4:8500,2.3.4.5:8500
     hostAndPorts: ${SW_CONFIG_CONSUL_HOST_AND_PORTS:1.2.3.4:8500}

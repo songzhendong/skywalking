@@ -1,0 +1,71 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# DolphinScheduler component-level metrics (Master / Worker / API / Alert).
+# Instance identity uses `host_name` from Collector (resource host.name or relabel).
+filter: "{ tags -> tags.job_name == 'dolphinscheduler-monitoring' }"
+expSuffix: tag({tags -> tags.cluster = 'dolphinscheduler::' + tags.cluster}).instance(['cluster'], ['host_name'], Layer.DOLPHINSCHEDULER)
+metricPrefix: meter_dolphinscheduler_instance
+metricsRules:
+  # Master
+  - name: master_overload_count
+    exp: ds_master_overload_count_total.sum(['cluster', 'host_name']).increase('PT1M')
+  - name: master_consume_command_count
+    exp: ds_master_consume_command_count_total.sum(['cluster', 'host_name']).increase('PT1M')
+  - name: master_scheduler_failover_check_count
+    exp: ds_master_scheduler_failover_check_count_total.sum(['cluster', 'host_name']).increase('PT1M')
+  - name: master_scheduler_failover_check_time_percentile
+    exp: ds_master_scheduler_failover_check_time_seconds.sum(['le', 'cluster', 'host_name']).increase('PT1M').histogram("le", TimeUnit.SECONDS).histogram_percentile([50,75,90,95,99])
+
+  # RPC (typically Master). Source name is ds.rpc.client.sync.request.duration.time → *_duration_time_seconds.
+  # method_name is collapsed (not in sum labels) to avoid high cardinality.
+  - name: rpc_client_sync_request_exception_count
+    exp: ds_rpc_client_sync_request_exception_count_total.sum(['cluster', 'host_name']).increase('PT1M')
+  - name: rpc_client_sync_request_duration_percentile
+    exp: ds_rpc_client_sync_request_duration_time_seconds.sum(['le', 'cluster', 'host_name']).increase('PT1M').histogram("le", TimeUnit.SECONDS).histogram_percentile([50,75,90,95,99])
+
+  # Worker
+  - name: worker_overload_count
+    exp: ds_worker_overload_count_total.sum(['cluster', 'host_name']).increase('PT1M')
+  - name: worker_task
+    exp: ds_worker_task.sum(['cluster', 'host_name'])
+  - name: worker_execute_queue_size
+    exp: ds_worker_execute_queue_size.sum(['cluster', 'host_name'])
+  - name: worker_active_execute_thread
+    exp: ds_worker_active_execute_thread.sum(['cluster', 'host_name'])
+  # * 100: MAL stores long; (0,1) ratios would otherwise collapse to 1 via Analyzer.getValue.
+  - name: worker_cpu_usage
+    exp: (ds_worker_cpu_usage * 100).sum(['cluster', 'host_name'])
+  - name: worker_memory_usage
+    exp: (ds_worker_memory_usage * 100).sum(['cluster', 'host_name'])
+  - name: worker_memory_available
+    exp: (ds_worker_memory_available * 100).sum(['cluster', 'host_name'])
+  - name: worker_full_submit_queue_count
+    exp: ds_worker_full_submit_queue_count_total.sum(['cluster', 'host_name']).increase('PT1M')
+
+  # API
+  - name: api_request_count
+    exp: ds_api_request_count_total.sum(['cluster', 'host_name']).increase('PT1M')
+  - name: api_response_count
+    exp: ds_api_response_count_total.sum(['cluster', 'host_name', 'code']).increase('PT1M')
+  # user_id on the source timer is collapsed (not in sum labels).
+  - name: api_response_time_percentile
+    exp: ds_api_response_time_seconds.sum(['le', 'cluster', 'host_name']).increase('PT1M').histogram("le", TimeUnit.SECONDS).histogram_percentile([50,75,90,95,99])
+
+  # Alert
+  - name: alert_send_count
+    exp: ds_alert_send_count_total.sum(['cluster', 'host_name', 'status']).increase('PT1M')
+  - name: alert_pending
+    exp: ds_alert_pending.sum(['cluster', 'host_name'])

@@ -1,0 +1,255 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+script: oap-server/server-starter/src/main/resources/otel-rules/dolphinscheduler/dolphinscheduler-service.yaml
+input:
+  ds_workflow_instance_running:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+      value: 4.0
+  ds_task_prepared:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+      value: 7.0
+  ds_worker_active_execute_thread:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        host_name: ds-worker-1
+      value: 3.0
+  ds_task_instance_count_total:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        state: success
+      value: 20.0
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        state: fail
+      value: 4.0
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        state: timeout
+      value: 2.0
+  ds_workflow_instance_count_total:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        state: success
+      value: 10.0
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        state: fail
+      value: 1.0
+  ds_task_dispatch_count_total:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+      value: 30.0
+  ds_task_dispatch_failure_count_total:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+      value: 2.0
+  ds_task_dispatch_error_count_total:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+      value: 1.0
+  ds_task_execution_duration_seconds:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        le: '1'
+      value: 5.0
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        le: '5'
+      value: 10.0
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        le: '30'
+      value: 15.0
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        le: '60'
+      value: 20.0
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+        le: '+Inf'
+      value: 25.0
+  ds_workflow_create_command_count_total:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+      value: 8.0
+  ds_workflow_instance_submit_count_total:
+    - labels:
+        cluster: ds-cluster
+        job_name: dolphinscheduler-monitoring
+      value: 6.0
+expected:
+  meter_dolphinscheduler_workflow_instance_running:
+    entities:
+      - scope: SERVICE
+        service: 'dolphinscheduler::ds-cluster'
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+        value: 4.0
+  meter_dolphinscheduler_task_prepared:
+    entities:
+      - scope: SERVICE
+        service: 'dolphinscheduler::ds-cluster'
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+        value: 7.0
+  meter_dolphinscheduler_worker_active_execute_thread:
+    entities:
+      - scope: SERVICE
+        service: 'dolphinscheduler::ds-cluster'
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+        value: 3.0
+  meter_dolphinscheduler_task_success_count:
+    entities:
+      - scope: SERVICE
+        service: 'dolphinscheduler::ds-cluster'
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+        value: 10.0
+  meter_dolphinscheduler_task_fail_count:
+    entities:
+      - scope: SERVICE
+        service: 'dolphinscheduler::ds-cluster'
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+        value: 2.0
+  meter_dolphinscheduler_task_timeout_count:
+    entities:
+      - scope: SERVICE
+        service: 'dolphinscheduler::ds-cluster'
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+        value: 1.0
+  meter_dolphinscheduler_workflow_success_count:
+    entities:
+      - scope: SERVICE
+        service: 'dolphinscheduler::ds-cluster'
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+        value: 5.0
+  meter_dolphinscheduler_workflow_fail_count:
+    entities:
+      - scope: SERVICE
+        service: 'dolphinscheduler::ds-cluster'
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+        value: 0.5
+  meter_dolphinscheduler_task_dispatch_count:
+    entities:
+      - scope: SERVICE
+        service: 'dolphinscheduler::ds-cluster'
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+        value: 15.0
+  meter_dolphinscheduler_task_dispatch_failure_count:
+    entities:
+      - scope: SERVICE
+        service: 'dolphinscheduler::ds-cluster'
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+        value: 1.0
+  meter_dolphinscheduler_task_dispatch_error_count:
+    entities:
+      - scope: SERVICE
+        service: 'dolphinscheduler::ds-cluster'
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+        value: 0.5
+  meter_dolphinscheduler_task_execution_duration_percentile:
+    entities:
+      - scope: SERVICE
+        service: 'dolphinscheduler::ds-cluster'
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          le: '1000'
+        value: 2.5
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          le: '5000'
+        value: 5.0
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          le: '30000'
+        value: 7.5
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          le: '60000'
+        value: 10.0
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+          le: '9223372036854775807'
+        value: 12.5
+  meter_dolphinscheduler_workflow_create_command_count:
+    entities:
+      - scope: SERVICE
+        service: 'dolphinscheduler::ds-cluster'
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+        value: 4.0
+  meter_dolphinscheduler_workflow_instance_submit_count:
+    entities:
+      - scope: SERVICE
+        service: 'dolphinscheduler::ds-cluster'
+        layer: DOLPHINSCHEDULER
+    samples:
+      - labels:
+          cluster: 'dolphinscheduler::ds-cluster'
+        value: 3.0

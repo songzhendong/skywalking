@@ -1,0 +1,92 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# DolphinScheduler metric matrix via mock OTLP replay (29 metric families).
+cases:
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql service ly DOLPHINSCHEDULER
+    expected: expected/service.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql instance ls --service-name=dolphinscheduler::ds-cluster
+    expected: expected/instance.yml
+  # Service meters
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_workflow_instance_running --service-name=dolphinscheduler::ds-cluster
+    expected: expected/metrics-has-value.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_task_prepared --service-name=dolphinscheduler::ds-cluster
+    expected: expected/metrics-has-value.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_worker_active_execute_thread --service-name=dolphinscheduler::ds-cluster
+    expected: expected/metrics-has-value.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_task_success_count --service-name=dolphinscheduler::ds-cluster
+    expected: expected/metrics-has-value.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_task_fail_count --service-name=dolphinscheduler::ds-cluster
+    expected: expected/metrics-has-value.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_task_timeout_count --service-name=dolphinscheduler::ds-cluster
+    expected: expected/metrics-has-value.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_workflow_success_count --service-name=dolphinscheduler::ds-cluster
+    expected: expected/metrics-has-value.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_workflow_fail_count --service-name=dolphinscheduler::ds-cluster
+    expected: expected/metrics-has-value.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_task_dispatch_count --service-name=dolphinscheduler::ds-cluster
+    expected: expected/metrics-has-value.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_task_dispatch_failure_count --service-name=dolphinscheduler::ds-cluster
+    expected: expected/metrics-has-value.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_task_dispatch_error_count --service-name=dolphinscheduler::ds-cluster
+    expected: expected/metrics-has-value.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_task_execution_duration_percentile --service-name=dolphinscheduler::ds-cluster
+    expected: expected/metrics-has-value-percentile.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_workflow_create_command_count --service-name=dolphinscheduler::ds-cluster
+    expected: expected/metrics-has-value.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_workflow_instance_submit_count --service-name=dolphinscheduler::ds-cluster
+    expected: expected/metrics-has-value.yml
+  # Instance — Master
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_instance_master_overload_count --service-name=dolphinscheduler::ds-cluster --instance-name=ds-master-1
+    expected: expected/metrics-has-value.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_instance_master_consume_command_count --service-name=dolphinscheduler::ds-cluster --instance-name=ds-master-1
+    expected: expected/metrics-has-value.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_instance_master_scheduler_failover_check_count --service-name=dolphinscheduler::ds-cluster --instance-name=ds-master-1
+    expected: expected/metrics-has-value.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_instance_master_scheduler_failover_check_time_percentile --service-name=dolphinscheduler::ds-cluster --instance-name=ds-master-1
+    expected: expected/metrics-has-value-percentile.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_instance_rpc_client_sync_request_exception_count --service-name=dolphinscheduler::ds-cluster --instance-name=ds-master-1
+    expected: expected/metrics-has-value.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_instance_rpc_client_sync_request_duration_percentile --service-name=dolphinscheduler::ds-cluster --instance-name=ds-master-1
+    expected: expected/metrics-has-value-percentile.yml
+  # Instance — Worker
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_instance_worker_overload_count --service-name=dolphinscheduler::ds-cluster --instance-name=ds-worker-1
+    expected: expected/metrics-has-value.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_instance_worker_task --service-name=dolphinscheduler::ds-cluster --instance-name=ds-worker-1
+    expected: expected/metrics-has-value.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_instance_worker_execute_queue_size --service-name=dolphinscheduler::ds-cluster --instance-name=ds-worker-1
+    expected: expected/metrics-has-value.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_instance_worker_active_execute_thread --service-name=dolphinscheduler::ds-cluster --instance-name=ds-worker-1
+    expected: expected/metrics-has-value.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_instance_worker_cpu_usage --service-name=dolphinscheduler::ds-cluster --instance-name=ds-worker-1
+    expected: expected/metrics-has-value.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_instance_worker_memory_usage --service-name=dolphinscheduler::ds-cluster --instance-name=ds-worker-1
+    expected: expected/metrics-has-value.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_instance_worker_memory_available --service-name=dolphinscheduler::ds-cluster --instance-name=ds-worker-1
+    expected: expected/metrics-has-value.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_instance_worker_full_submit_queue_count --service-name=dolphinscheduler::ds-cluster --instance-name=ds-worker-1
+    expected: expected/metrics-has-value.yml
+  # Instance — API
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_instance_api_request_count --service-name=dolphinscheduler::ds-cluster --instance-name=ds-api-1
+    expected: expected/metrics-has-value.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_instance_api_response_count --service-name=dolphinscheduler::ds-cluster --instance-name=ds-api-1
+    expected: expected/metrics-has-value-label-code.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_instance_api_response_time_percentile --service-name=dolphinscheduler::ds-cluster --instance-name=ds-api-1
+    expected: expected/metrics-has-value-percentile.yml
+  # Instance — Alert
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_instance_alert_send_count --service-name=dolphinscheduler::ds-cluster --instance-name=ds-alert-1
+    expected: expected/metrics-has-value-label-status.yml
+  - query: swctl --display yaml --base-url=http://${oap_host}:${oap_12800}/graphql metrics exec --expression=meter_dolphinscheduler_instance_alert_pending --service-name=dolphinscheduler::ds-cluster --instance-name=ds-alert-1
+    expected: expected/metrics-has-value.yml
