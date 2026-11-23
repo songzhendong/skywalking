@@ -72,6 +72,17 @@ public class AsyncProfilerFileCollectionObserver implements StreamObserver<Async
         if (Objects.isNull(taskMetaData) && asyncProfilerData.hasMetaData()) {
             taskMetaData = parseMetaData(asyncProfilerData.getMetaData(), taskDAO);
             AsyncProfilerTask task = taskMetaData.getTask();
+            // taskDAO.getById may return null (TTL, lag, wrong id). Never ACK an upload or
+            // touch task.getId() / task logs without a real task — that NPEs or strands the UI.
+            if (task == null) {
+                log.error(
+                    "AsyncProfiler instanceId:{} uploaded meta for unknown taskId, reject collection",
+                    taskMetaData.getInstanceId());
+                responseObserver.onNext(AsyncProfilerCollectionResponse.newBuilder()
+                        .setType(AsyncProfilingStatus.EXECUTION_TASK_ERROR)
+                        .build());
+                return;
+            }
             if (AsyncProfilingStatus.PROFILING_SUCCESS.equals(taskMetaData.getType())) {
                 if (jfrMaxSize >= taskMetaData.getContentSize()) {
                     tempFile = Files.createTempFile(task.getId() + taskMetaData.getInstanceId() + System.currentTimeMillis(), ".jfr");
@@ -88,7 +99,7 @@ public class AsyncProfilerFileCollectionObserver implements StreamObserver<Async
                 recordAsyncProfilerTaskLog(task, taskMetaData.getInstanceId(),
                         AsyncProfilerTaskLogOperationType.EXECUTION_TASK_ERROR);
             }
-        } else if (asyncProfilerData.hasContent()) {
+        } else if (asyncProfilerData.hasContent() && fileOutputStream != null) {
             fileOutputStream.write(asyncProfilerData.getContent().toByteArray());
         }
     }
