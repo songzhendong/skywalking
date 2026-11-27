@@ -22,6 +22,7 @@ import org.apache.skywalking.oap.server.core.UnexpectedException;
 import org.apache.skywalking.oap.server.core.analysis.meter.Meter;
 import org.apache.skywalking.oap.server.core.analysis.meter.MeterEntity;
 import org.apache.skywalking.oap.server.core.analysis.meter.function.AcceptableValue;
+import org.apache.skywalking.oap.server.core.analysis.meter.function.HistogramBucketKey;
 import org.apache.skywalking.oap.server.core.analysis.meter.function.MeterFunction;
 import org.apache.skywalking.oap.server.core.analysis.meter.function.PercentileArgument;
 import org.apache.skywalking.oap.server.core.analysis.metrics.DataLabel;
@@ -40,7 +41,6 @@ import org.apache.skywalking.oap.server.core.storage.type.Convert2Storage;
 import org.apache.skywalking.oap.server.core.storage.type.StorageBuilder;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collector;
@@ -68,19 +68,19 @@ public abstract class SumHistogramPercentileFunction extends Meter implements Ac
     @Getter
     @ElasticSearch.EnableDocValues
     @Column(name = ENTITY_ID)
-    @BanyanDB.SeriesID(index = 0)
+    @BanyanDB.Measure.SeriesID(index = 0)
     private String entityId;
     @Getter
     @Setter
     @Column(name = VALUE, dataType = Column.ValueDataType.LABELED_VALUE, storageOnly = true)
     @ElasticSearch.Column(legacyName = "value")
-    @BanyanDB.MeasureField
+    @BanyanDB.Measure.Field
     private DataTable percentileValues = new DataTable(10);
     @Getter
     @Setter
     @Column(name = SUMMATION, storageOnly = true)
     @ElasticSearch.Column(legacyName = "summation")
-    @BanyanDB.MeasureField
+    @BanyanDB.Measure.Field
     protected DataTable summation = new DataTable(30);
     /**
      * Rank
@@ -88,7 +88,7 @@ public abstract class SumHistogramPercentileFunction extends Meter implements Ac
     @Getter
     @Setter
     @Column(name = RANKS, storageOnly = true)
-    @BanyanDB.MeasureField
+    @BanyanDB.Measure.Field
     private IntList ranks = new IntList(10);
 
     private boolean isCalculated = false;
@@ -215,8 +215,8 @@ public abstract class SumHistogramPercentileFunction extends Meter implements Ac
                     }
 
                     long count = 0;
-                    final List<String> sortedKeys = subDataset.sortedKeys(Comparator.comparingLong(Long::parseLong));
-
+                    final List<String> sortedKeys = subDataset.sortedKeys(HistogramBucketKey.ASC);
+                    Long highestFiniteBound = null;
                     int loopIndex = 0;
 
                     for (String key : sortedKeys) {
@@ -228,12 +228,13 @@ public abstract class SumHistogramPercentileFunction extends Meter implements Ac
 
                             if (count >= roof) {
                                 labels.put(PERCENTILE_LABEL_NAME, String.valueOf(ranks.get(rankIdx)));
-                                percentileValues.put(labels, Long.parseLong(key));
+                                percentileValues.put(labels, HistogramBucketKey.percentileBound(key, highestFiniteBound));
                                 loopIndex++;
                             } else {
                                 break;
                             }
                         }
+                        highestFiniteBound = HistogramBucketKey.advanceHighestFinite(key, highestFiniteBound);
                     }
                 });
         }

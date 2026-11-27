@@ -50,15 +50,15 @@ class StorageEsInstallerTest {
     private ModuleManager moduleManager;
 
     @Test
-    void whenCreating_withoutSchemaChange_registersThePhysicalTableWithoutCallingElasticsearch() throws Exception {
+    void whenCreating_runtimeLocalOnly_registersThePhysicalTableWithoutCallingElasticsearch() throws Exception {
         final String metric = "installer_test_metric";
         final Model model = new Model(
-            metric, Collections.emptyList(), 0, DownSampling.Minute, false, Metrics.class, true, false,
+            metric, Collections.emptyList(), 0, DownSampling.Minute, false, Metrics.class, true,
             new SQLDatabaseModelExtension(), new BanyanDBModelExtension(), new ElasticSearchModelExtension()
         );
 
         new StorageEsInstaller(client, moduleManager, new StorageModuleElasticsearchConfig())
-            .whenCreating(model, StorageManipulationOpt.withoutSchemaChange());
+            .whenCreating(model, StorageManipulationOpt.runtimeLocalOnly());
 
         assertEquals(
             IndexController.METRICS_LOGIC_TABLE_NAME,
