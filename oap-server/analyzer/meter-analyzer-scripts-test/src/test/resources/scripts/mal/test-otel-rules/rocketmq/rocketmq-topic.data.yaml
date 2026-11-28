@@ -41,7 +41,13 @@ input:
     - labels:
         cluster: test-cluster
         topic: test-topic
-      value: 100.0
+        group: group-a
+      value: 10.0
+    - labels:
+        cluster: test-cluster
+        topic: test-topic
+        group: group-b
+      value: 90.0
   rocketmq_producer_offset:
     - labels:
         cluster: test-cluster
@@ -111,7 +117,13 @@ expected:
       - labels:
           cluster: 'rocketmq::test-cluster'
           topic: test-topic
-        value: 100.0
+          group: group-a
+        value: 10.0
+      - labels:
+          cluster: 'rocketmq::test-cluster'
+          topic: test-topic
+          group: group-b
+        value: 90.0
   meter_rocketmq_topic_producer_offset:
     entities:
       - scope: ENDPOINT

@@ -48,7 +48,7 @@ metricsRules:
     exp: rocketmq_producer_tps.sum(['cluster','topic'])
 
   - name: consumer_group_tps
-    exp: rocketmq_consumer_tps.sum(['cluster','topic'])
+    exp: rocketmq_consumer_tps.sum(['cluster','topic','group'])
 
   - name: producer_offset
     exp: rocketmq_producer_offset.sum(['cluster','topic']).downsampling(MAX)
